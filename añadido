@@ -1,0 +1,119 @@
+Option Explicit
+
+' =====================================================================
+' 1. DECLARACIONES DE LA API DE WINDOWS (Compatible con 32 y 64 bits)
+' =====================================================================
+#If VBA7 Then
+    Private Declare PtrSafe Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
+    Private Declare PtrSafe Function SetWindowPos Lib "user32" (ByVal hwnd As LongPtr, ByVal hWndInsertAfter As LongPtr, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
+    Private Declare PtrSafe Function ShowWindow Lib "user32" (ByVal hwnd As LongPtr, ByVal nCmdShow As Long) As Long
+    Private Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+#Else
+    Private Declare Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
+    Private Declare Function SetWindowPos Lib "user32" (ByVal hwnd As Long, ByVal hWndInsertAfter As Long, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
+    Private Declare Function ShowWindow Lib "user32" (ByVal hwnd As Long, ByVal nCmdShow As Long) As Long
+    Private Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+#End If
+
+' Constantes para métricas del sistema
+Private Const SM_CMONITORS As Long = 80 ' Número de monitores
+Private Const SM_CXSCREEN As Long = 0   ' Ancho del monitor principal
+Private Const SM_CYSCREEN As Long = 1   ' Alto del monitor principal
+
+' Constantes para manipulación de ventanas
+Private Const HWND_TOP As Long = 0
+Private Const SWP_SHOWWINDOW As Long = &H40
+Private Const SW_MAXIMIZE As Long = 3
+
+' Constantes de PowerPoint (Late Binding)
+Private Const ppShowTypeWindow As Long = 2
+Private Const msoFalse As Long = 0
+Private Const msoTrue As Long = -1
+
+' =====================================================================
+' 2. MACRO PRINCIPAL
+' =====================================================================
+Public Sub LanzarPresentacionEnMonitor2()
+    Dim rutaArchivo As String
+    Dim ppApp As Object
+    Dim ppPres As Object
+    Dim numMonitores As Long
+    Dim anchoMonitor1 As Long
+    Dim altoMonitor1 As Long
+    
+    #If VBA7 Then
+        Dim hwndSlideShow As LongPtr
+    #Else
+        Dim hwndSlideShow As Long
+    #End If
+
+    ' --- A. Verificación de Hardware (Monitores) ---
+    numMonitores = GetSystemMetrics(SM_CMONITORS)
+    If numMonitores < 2 Then
+        MsgBox "Fallo de entorno: Solo se detectó 1 monitor en este PC." & vbCrLf & _
+               "La presentación no se puede extender.", vbCritical, "Hardware Insuficiente"
+        Exit Sub
+    End If
+
+    ' --- B. Lectura de la ruta (Ajustar nombre de hoja y celda) ---
+    rutaArchivo = ThisWorkbook.Sheets("Hoja1").Range("A1").Value
+    If Dir(rutaArchivo) = "" Then
+        MsgBox "No se encuentra el archivo .pptx en: " & rutaArchivo, vbExclamation, "Archivo no encontrado"
+        Exit Sub
+    End If
+
+    ' --- C. Instanciar PowerPoint silenciosamente ---
+    On Error Resume Next
+    Set ppApp = GetObject(, "PowerPoint.Application")
+    If Err.Number <> 0 Then
+        Set ppApp = CreateObject("PowerPoint.Application")
+    End If
+    On Error GoTo 0
+    
+    ppApp.Visible = True ' Es necesario que la app sea visible para lanzar el SlideShow
+
+    ' --- D. Abrir Presentación y configurar SlideShow ---
+    Set ppPres = ppApp.Presentations.Open(rutaArchivo, msoFalse, msoFalse, msoTrue)
+    
+    With ppPres.SlideShowSettings
+        .ShowType = ppShowTypeWindow ' ESTRICTO: Modo ventana para no perder foco
+        .Run
+    End With
+
+    ' Pausa crítica: dar tiempo a Windows para generar la ventana del reproductor
+    Sleep 500
+
+    ' --- E. Obtener el Handle (HWND) de la ventana del SlideShow ---
+    On Error Resume Next
+    #If VBA7 Then
+        hwndSlideShow = ppApp.SlideShowWindows(1).HWND
+    #Else
+        hwndSlideShow = CLng(ppApp.SlideShowWindows(1).HWND)
+    #End If
+    On Error GoTo 0
+
+    If hwndSlideShow = 0 Then
+        MsgBox "Error interno: No se pudo capturar la ventana de presentación.", vbCritical, "Error de API"
+        Exit Sub
+    End If
+
+    ' --- F. Lógica de Posicionamiento con API de Windows ---
+    ' Asumimos la configuración estándar de Windows: Monitor 2 extendido a la derecha.
+    ' Para moverlo al Monitor 2, empujamos la ventana más allá del ancho del Monitor 1.
+    anchoMonitor1 = GetSystemMetrics(SM_CXSCREEN)
+    altoMonitor1 = GetSystemMetrics(SM_CYSCREEN)
+
+    ' 1. Movemos la ventana a las coordenadas del Monitor 2 (X = Ancho Monitor 1 + un margen)
+    SetWindowPos hwndSlideShow, HWND_TOP, anchoMonitor1 + 100, 100, 800, 600, SWP_SHOWWINDOW
+    
+    ' Breve pausa para asegurar que el SO registra el cambio de pantalla
+    Sleep 200
+    
+    ' 2. Maximizamos la ventana. Como ya reside en el Monitor 2, Windows la maximizará allí.
+    ShowWindow hwndSlideShow, SW_MAXIMIZE
+
+    ' Liberar memoria
+    Set ppPres = Nothing
+    Set ppApp = Nothing
+
+End Sub
