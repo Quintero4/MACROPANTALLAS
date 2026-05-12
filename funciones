@@ -1,0 +1,215 @@
+Sub copyPhotos()
+    Application.DisplayAlerts = False
+    Dim wb As Workbook
+    Set wb = ActiveWorkbook
+
+    ' Declaración correcta de tipos
+    Dim generalPath As String, aifPath As String, flPath As String, retrofitPath As String, gstPath As String, screensaverPath As String
+    Dim generalFolders As Dictionary, aifFolders As Dictionary, flFolders As Dictionary, retrofitFolders As Dictionary, gstFolders As Dictionary
+    Dim backupFilename As String
+    Dim generalFiles As Object, aifFiles As Object, flFiles As Object, gstFiles As Object, retrofitFiles As Object
+    Dim lastRow As Long, i As Long
+    
+    Set generalFolders = New Dictionary
+    Set gstFolders = New Dictionary
+    Set aifFolders = New Dictionary
+    Set flFolders = New Dictionary
+    Set retrofitFolders = New Dictionary
+    
+    ' Rutas de Origen (Aseguramos que terminen en \)
+    generalPath = ThisWorkbook.path & "\Diapositivas\1. General\"
+    aifPath = ThisWorkbook.path & "\Diapositivas\2. AIF\"
+    gstPath = ThisWorkbook.path & "\Diapositivas\3. GST\"
+    flPath = ThisWorkbook.path & "\Diapositivas\4. FL\"
+    retrofitPath = ThisWorkbook.path & "\Diapositivas\5. Retrofit\"
+    
+    With Sheets("Rutas")
+        .Visible = True
+        .Activate
+        screensaverPath = Cells(1, 2).Value
+        ' Asegurar que screensaverPath termine en \
+        If Right(screensaverPath, 1) <> "\" Then screensaverPath = screensaverPath & "\"
+        
+        lastRow = Cells(2, 2).End(xlDown).Row
+        For i = 2 To lastRow
+            ' Trim ayuda a eliminar espacios accidentales en el Excel
+            Dim areaNombre As String: areaNombre = Trim(Cells(i, 1).Value)
+            Dim carpetaNombre As String: carpetaNombre = Trim(Cells(i, 2).Value)
+            
+            Select Case areaNombre
+                Case "N4": generalFolders.Add carpetaNombre, 1
+                Case "AIF": aifFolders.Add carpetaNombre, 1
+                Case "GST": gstFolders.Add carpetaNombre, 1
+                Case "FL": flFolders.Add carpetaNombre, 1
+                Case "Retrofit": retrofitFolders.Add carpetaNombre, 1
+            End Select
+        Next i
+        .Visible = False
+    End With
+    
+    ' Crear Backup
+    backupFilename = ThisWorkbook.path & "\Historial\" & Format(Now, "dd-mmm-yyyy hh-nn") & ".zip"
+    Call createBackup(ThisWorkbook.path & "\Diapositivas\", backupFilename)
+    
+    ' Obtener archivos base
+    Set generalFiles = getFiles(generalPath)
+    
+    ' Procesar cada área
+    If form.CheckBoxN4 Then
+        Call deleteFolders(screensaverPath & "N4\", generalFolders)
+        Call setScreensaver(screensaverPath & "N4\", generalFiles, generalFiles, generalPath, generalFolders)
+    End If
+    
+    If form.CheckBoxAIF Then
+        Set aifFiles = getFiles(aifPath)
+        Call deleteFolders(screensaverPath & "AIF\", aifFolders)
+        Call setScreensaver(screensaverPath & "AIF\", generalFiles, aifFiles, aifPath, aifFolders)
+    End If
+    
+    If form.CheckBoxGST Then
+        Set gstFiles = getFiles(gstPath)
+        Call deleteFolders(screensaverPath & "GST\", gstFolders)
+        Call setScreensaver(screensaverPath & "GST\", generalFiles, gstFiles, gstPath, gstFolders)
+    End If
+    
+    If form.CheckBoxFL Then
+        Set flFiles = getFiles(flPath)
+        Call deleteFolders(screensaverPath & "FL\", flFolders)
+        Call setScreensaver(screensaverPath & "FL\", generalFiles, flFiles, flPath, flFolders)
+    End If
+    
+    If form.CheckBoxRetrofit Then
+        Set retrofitFiles = getFiles(retrofitPath)
+        Call deleteFolders(screensaverPath & "Retrofit\", retrofitFolders)
+        Call setScreensaver(screensaverPath & "Retrofit\", generalFiles, retrofitFiles, retrofitPath, retrofitFolders)
+    End If
+    
+End Sub
+
+Public Function getFiles(ByVal folderString As String) As Object
+    Dim fso As FileSystemObject
+    Dim fileArray As Object
+    Set fso = New FileSystemObject
+    Set fileArray = CreateObject("System.Collections.ArrayList")
+    
+    If fso.FolderExists(folderString) Then
+        Dim folderObj As Object, fileObj As Object
+        Set folderObj = fso.GetFolder(folderString)
+        For Each fileObj In folderObj.files
+            fileArray.Add fso.GetFile(fileObj.path)
+        Next fileObj
+    End If
+    Set getFiles = fileArray
+End Function
+
+Private Sub setScreensaver(ByVal screensaverPath As String, ByVal generalFiles As Object, ByVal areaFiles As Object, ByVal areaPath As String, ByVal areaFolders As Dictionary)
+    Dim fso As FileSystemObject
+    Set fso = New FileSystemObject
+    
+    Dim imageNumber As Integer
+    Dim folderFiles As Object
+    Dim folderScreensaverPath As String
+    Dim subCarpetaPath As String
+    Dim folderKey As Variant
+
+    For Each folderKey In areaFolders.Keys
+        imageNumber = 1
+        subCarpetaPath = areaPath & CStr(folderKey) & "\"
+        folderScreensaverPath = screensaverPath & CStr(folderKey) & "\"
+        
+        ' VALIDACIÓN: Solo intentamos leer la carpeta si existe físicamente
+        If fso.FolderExists(subCarpetaPath) Then
+            Set folderFiles = getFiles(subCarpetaPath)
+            Call copyImages(folderFiles, folderScreensaverPath, imageNumber)
+        End If
+        
+        ' Siempre copiamos los del área y generales (que ya fueron validados antes)
+        Call copyImages(areaFiles, folderScreensaverPath, imageNumber)
+        Call copyImages(generalFiles, folderScreensaverPath, imageNumber)
+    Next folderKey
+End Sub
+
+Private Sub copyImages(ByVal files As Object, ByVal path As String, ByRef imageNumber As Integer)
+    Dim fso As FileSystemObject
+    Set fso = New FileSystemObject
+    Dim fileItem As Variant
+    Dim ext As String
+    
+    ' Si no hay carpeta destino, la creamos
+    If Not fso.FolderExists(path) Then Exit Sub ' Opcional: fso.CreateFolder(path)
+
+    For Each fileItem In files
+        ext = UCase(fso.GetExtensionName(fileItem.Name))
+        Select Case ext
+            Case "PNG", "JPG", "JPEG"
+                Call pasteImageX3(fileItem, path, imageNumber, LCase(ext))
+            Case "PPTX", "PPT"
+                Call extractPPT(fileItem, path, imageNumber)
+        End Select
+    Next fileItem
+End Sub
+
+Private Sub pasteImageX3(ByVal file As Variant, ByVal path As String, ByRef imageNumber As Integer, ByVal extension As String)
+    Dim fso As FileSystemObject
+    Set fso = New FileSystemObject
+    Dim i As Integer
+    For i = 1 To 3
+        ' Asegurar que el path de destino termina bien
+        Dim destFile As String
+        destFile = path & "Diapositiva_" & imageNumber & "." & extension
+        Call fso.CopyFile(file.path, destFile, True)
+        imageNumber = imageNumber + 1
+    Next i
+End Sub
+
+Private Sub extractPPT(ByVal file As Variant, ByVal path As String, ByRef imageNumber As Integer)
+    Dim pptApp As Object, ppt As Object, pptSlide As Object
+    Dim i As Integer
+    
+    On Error Resume Next
+    Set pptApp = CreateObject("PowerPoint.Application")
+    Set ppt = pptApp.Presentations.Open(fileName:=file.path, ReadOnly:=True, WithWindow:=False)
+    
+    If Not ppt Is Nothing Then
+        For Each pptSlide In ppt.Slides
+            For i = 1 To 3
+                pptSlide.Export path & "Diapositiva_" & imageNumber & ".JPG", "JPG"
+                imageNumber = imageNumber + 1
+            Next i
+        Next pptSlide
+        ppt.Close
+    End If
+    pptApp.Quit
+End Sub
+
+Private Sub createBackup(ByVal backupPath As String, ByVal backupFilename As String)
+    Dim shellApp As Object, zipFolder As Object, sourceFolder As Object
+    Set shellApp = CreateObject("Shell.Application")
+    
+    ' Crear ZIP vacío
+    Open backupFilename For Output As #1
+    Print #1, Chr$(80) & Chr$(75) & Chr$(5) & Chr$(6) & String(18, 0)
+    Close #1
+    
+    Application.Wait (Now + TimeValue("0:00:01"))
+    
+    Set zipFolder = shellApp.Namespace(CVar(backupFilename))
+    Set sourceFolder = shellApp.Namespace(CVar(backupPath))
+    
+    If Not sourceFolder Is Nothing And Not zipFolder Is Nothing Then
+        zipFolder.CopyHere sourceFolder.Items, 4
+        Application.Wait (Now + TimeValue("0:00:02"))
+    End If
+End Sub
+
+Sub deleteFolders(ByVal screensaverPath As String, ByVal folders As Dictionary)
+    Dim fKey As Variant
+    For Each fKey In folders.Keys
+        Call deleteFiles(screensaverPath & CStr(fKey) & "\*.*")
+    Next fKey
+End Sub
+
+Sub deleteFiles(ByVal filePath As String)
+    If Len(Dir$(filePath)) > 0 Then Kill filePath
+End Sub
+
