@@ -32,8 +32,58 @@ Sub ConvertPPTXtoMP4()
             
             ' Buscar todos los archivos dentro de la carpeta
             For Each file In folder.Files
-                ' Filtrar solo archivos PPTX (evitando los archivos temporales de Office que empiezan por ~$)
+                ' Filtrar solo archivos PPTX (evitando los archivos temporales de Office)
                 If LCase(file.Name) Like "*.pptx" And Not LCase(file.Name) Like "~$*" Then
+                    
+                    pptxPath = folderPath & "\" & file.Name
+                    
+                    ' Definir el nombre específico para el MP4
+                    mp4Path = folderPath & "\" & Left(file.Name, InStrRev(file.Name, ".") - 1) & ".mp4"
+
+                    ' Garantizar la sobrescritura borrando el archivo antiguo
+                    If fso.FileExists(mp4Path) Then
+                        On Error Resume Next
+                        Kill mp4Path
+                        On Error GoTo 0
+                    End If
+
+                    ' Abrir la presentación
+                    Set pptPres = pptApp.Presentations.Open(pptxPath)
+
+                    ' --- CAMBIO CLAVE 1 ---
+                    ' El segundo parámetro ahora es 'False' (UseTimingsAndNarrations = False).
+                    ' Esto fuerza a PPT a dar exactamente 5 segundos (el tercer parámetro) a TODAS las diapositivas.
+                    pptPres.CreateVideo mp4Path, False, 5, 1080, 30, 85
+
+                    ' Dar un margen de un segundo para que PowerPoint inicie el motor de renderizado
+                    Application.Wait Now + TimeValue("0:00:01")
+
+                    ' --- CAMBIO CLAVE 2 ---
+                    ' Esperar hasta que el estado sea 3 (ppMediaTaskStatusDone = Terminado)
+                    Do While pptPres.CreateVideoStatus <> 3
+                        DoEvents ' Evita que Excel se congele
+                        Application.Wait Now + TimeValue("0:00:01")
+                        
+                        ' Si el estado es 4 (ppMediaTaskStatusFailed = Error), salimos para no atrapar la macro en un bucle infinito
+                        If pptPres.CreateVideoStatus = 4 Then
+                            Exit Do
+                        End If
+                    Loop
+
+                    ' Cerrar la presentación una vez finalizado el video completo
+                    pptPres.Close
+                    Set pptPres = Nothing
+                End If
+            Next file
+        End If
+    Next i
+
+    ' Cerrar la aplicación de PowerPoint y liberar memoria
+    pptApp.Quit
+    Set pptApp = Nothing
+    Set fso = Nothing
+
+End Sub
                     
                     pptxPath = folderPath & "\" & file.Name
                     
