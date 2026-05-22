@@ -1,0 +1,258 @@
+Sub ExtraerDatosTP2()
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim wsControl As Worksheet
+    Dim wsExclusions As Worksheet
+    Dim wsPais As Worksheet
+    Dim lastRow As Long
+    Dim lastRowControl As Long
+    Dim lastRowExclusions As Long
+    Dim lastRowPais As Long
+    Dim i As Long, j As Long
+    Dim dataMatrix() As Variant
+    Dim searchValues As Variant
+    Dim searchValue As Variant
+    Dim dict As Object
+    Dim key As Variant
+    Dim currentDate As Date
+    Dim startDate As Date
+    Dim endDate As Date
+    Dim exclusionValues As Collection
+    Dim valueMapping As Object
+    Dim isExcluded As Boolean
+    Dim sortedDataMatrix() As Variant
+    Dim sortedSearchValues As Variant
+    Dim tempMatrix() As Variant
+    Dim tempRow As Long
+    Dim tempArray As Variant ' Declaración única de tempArray
+    Dim paisDict As Object
+    Dim paisValue As Variant
+
+    ' Definir los valores buscados y sus correspondencias
+    Set valueMapping = CreateObject("Scripting.Dictionary")
+    valueMapping.Add "ST06", "ST06"
+    valueMapping.Add "ST08", "ST08"
+    valueMapping.Add "ST14", "ST14"
+    valueMapping.Add "ST30", "ST30"
+    valueMapping.Add "ST35", "ST35"
+    valueMapping.Add "ST40", "ST40"
+    valueMapping.Add "ST60", "ST60"
+    valueMapping.Add "ST70", "ST70"
+    valueMapping.Add "ST72", "ST72"
+    valueMapping.Add "OSI", "ST08"
+    valueMapping.Add "CIG", "ST06" ' Añadir CIG como ST06
+
+    ' Definir la hoja de control y obtener la última fila con datos
+    Set wsControl = ThisWorkbook.Sheets("PANEL DE CONTROL")
+    lastRowControl = wsControl.Cells(wsControl.Rows.Count, "B").End(xlUp).row
+
+    ' Limpiar los rangos correspondientes en las columnas B, C, D y E a partir de la fila 3
+    If lastRowControl > 2 Then
+        wsControl.Range("B3:D" & lastRowControl).ClearContents
+    End If
+
+    ' Abrir el archivo
+    Set wb = Workbooks.Open("\\spi60001.eadscasa.casa.corp\A400M\Lean_Manufacturing\3.- Formatos\07. AST\N3\05. Control Room\Tactical Plan\TAOAI. Master Plan CW*.xlsx", ReadOnly:=True)
+    Set ws = wb.Sheets("Tactical Plan Project View")
+
+    ' Encontrar la última fila con datos
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).row
+
+    ' Crear un diccionario para almacenar los datos
+    Set dict = CreateObject("Scripting.Dictionary")
+
+    ' Obtener la lista de valores de exclusión
+    Set wsExclusions = ThisWorkbook.Sheets("Exclusiones")
+    lastRowExclusions = wsExclusions.Cells(wsExclusions.Rows.Count, "A").End(xlUp).row
+    Set exclusionValues = New Collection
+    For i = 1 To lastRowExclusions
+        exclusionValues.Add wsExclusions.Cells(i, 1).Value
+    Next i
+
+    ' Recorrer las filas y extraer los datos para la fecha más antigua
+    For i = 2 To lastRow ' Recorrer de arriba hacia abajo para la fecha más antigua
+        For Each searchValue In valueMapping.Keys
+            If searchValue = "OSI" Then
+                If ws.Cells(i, 3).Value = searchValue Then
+                    key = ws.Cells(i, 1).Value & "_" & valueMapping(searchValue)
+                    If Not dict.Exists(key) Then
+                        dict.Add key, Array(ws.Cells(i, 1).Value, valueMapping(searchValue), ws.Cells(i, 4).Value, Empty)
+                    End If
+                End If
+            Else
+                If Left(ws.Cells(i, 3).Value, Len(searchValue)) = searchValue Then
+                    key = ws.Cells(i, 1).Value & "_" & valueMapping(searchValue)
+                    If Not dict.Exists(key) Then
+                        dict.Add key, Array(ws.Cells(i, 1).Value, valueMapping(searchValue), ws.Cells(i, 4).Value, Empty)
+                    End If
+                End If
+            End If
+        Next searchValue
+    Next i
+
+    ' Recorrer las filas y extraer los datos para la fecha más reciente
+    For i = lastRow To 2 Step -1 ' Recorrer de abajo hacia arriba para la fecha más reciente
+        For Each searchValue In valueMapping.Keys
+            If searchValue = "OSI" Then
+                If ws.Cells(i, 3).Value = searchValue Then
+                    key = ws.Cells(i, 1).Value & "_" & valueMapping(searchValue)
+                    If dict.Exists(key) Then
+                        If IsEmpty(dict(key)(3)) Then
+                            ' Extraer el array, modificar el elemento y volver a asignar el array modificado
+                            tempArray = dict(key)
+                            tempArray(3) = ws.Cells(i, 5).Value
+                            dict(key) = tempArray
+                        End If
+                    End If
+                End If
+            Else
+                If Left(ws.Cells(i, 3).Value, Len(searchValue)) = searchValue Then
+                    key = ws.Cells(i, 1).Value & "_" & valueMapping(searchValue)
+                    If dict.Exists(key) Then
+                        If IsEmpty(dict(key)(3)) Then
+                            ' Extraer el array, modificar el elemento y volver a asignar el array modificado
+                            tempArray = dict(key)
+                            tempArray(3) = ws.Cells(i, 5).Value
+                            dict(key) = tempArray
+                        End If
+                    End If
+                End If
+            End If
+        Next searchValue
+    Next i
+
+    ' Crear la matriz de datos
+    ReDim dataMatrix(1 To dict.Count, 1 To 4)
+    j = 1
+    For Each key In dict.Keys
+        dataMatrix(j, 1) = dict(key)(0)
+        dataMatrix(j, 2) = dict(key)(1)
+        dataMatrix(j, 3) = dict(key)(2)
+        dataMatrix(j, 4) = dict(key)(3)
+        j = j + 1
+    Next key
+
+    ' Cerrar el archivo
+    wb.Close SaveChanges:=False
+
+    ' Obtener la fecha actual
+    currentDate = Date
+
+    ' Filtrar los datos por la fecha actual
+    tempRow = 1
+    For i = 1 To UBound(dataMatrix, 1)
+        startDate = CDate(dataMatrix(i, 3))
+        endDate = CDate(dataMatrix(i, 4))
+        If currentDate >= startDate And currentDate <= endDate Then
+            ' Verificar si el valor está en la lista de exclusiones
+            isExcluded = False
+            On Error Resume Next
+            For Each exclusionValue In exclusionValues
+                If dataMatrix(i, 1) = exclusionValue Then
+                    isExcluded = True
+                    Exit For
+                End If
+            Next exclusionValue
+            On Error GoTo 0
+
+            If Not isExcluded Then
+                tempRow = tempRow + 1
+            End If
+        End If
+    Next i
+
+    ' Redimensionar tempMatrix para eliminar filas vacías
+    ReDim tempMatrix(1 To tempRow - 1, 1 To 4)
+    tempRow = 1
+    For i = 1 To UBound(dataMatrix, 1)
+        startDate = CDate(dataMatrix(i, 3))
+        endDate = CDate(dataMatrix(i, 4))
+        If currentDate >= startDate And currentDate <= endDate Then
+            ' Verificar si el valor está en la lista de exclusiones
+            isExcluded = False
+            On Error Resume Next
+            For Each exclusionValue In exclusionValues
+                If dataMatrix(i, 1) = exclusionValue Then
+                    isExcluded = True
+                    Exit For
+                End If
+            Next exclusionValue
+            On Error GoTo 0
+
+            If Not isExcluded Then
+                tempMatrix(tempRow, 1) = dataMatrix(i, 1)
+                tempMatrix(tempRow, 2) = dataMatrix(i, 2)
+                tempMatrix(tempRow, 3) = dataMatrix(i, 3)
+                tempMatrix(tempRow, 4) = dataMatrix(i, 4)
+                tempRow = tempRow + 1
+            End If
+        End If
+    Next i
+
+    ' Ordenar los datos en la hoja "PANEL DE CONTROL" según el orden de los valores buscados
+    sortedSearchValues = Array("ST06", "ST08", "ST14", "ST30", "ST35", "ST40", "ST60", "ST70", "ST72")
+    ReDim sortedDataMatrix(1 To UBound(sortedSearchValues) + 1, 1 To 4) ' Asegurarse de que haya suficiente espacio
+    j = 1
+    For Each sortedKey In sortedSearchValues
+        found = False
+        For i = 1 To UBound(tempMatrix, 1)
+            If tempMatrix(i, 2) = sortedKey Then
+                sortedDataMatrix(j, 1) = tempMatrix(i, 1)
+                sortedDataMatrix(j, 2) = tempMatrix(i, 2)
+                sortedDataMatrix(j, 3) = tempMatrix(i, 3)
+                sortedDataMatrix(j, 4) = tempMatrix(i, 4)
+                found = True
+                j = j + 1
+                Exit For
+            End If
+        Next i
+        If Not found Then
+            sortedDataMatrix(j, 1) = "-"
+            sortedDataMatrix(j, 2) = sortedKey
+            sortedDataMatrix(j, 3) = "-"
+            sortedDataMatrix(j, 4) = "-"
+            j = j + 1
+        End If
+    Next sortedKey
+
+    ' Redimensionar sortedDataMatrix para eliminar filas vacías
+    ReDim Preserve sortedDataMatrix(1 To j - 1, 1 To 4)
+
+    ' Limpiar la hoja "PANEL DE CONTROL" y pegar los datos ordenados
+    wsControl.Range("B3:D" & lastRowControl).ClearContents
+    j = 3
+    For i = 1 To UBound(sortedDataMatrix, 1)
+        If Not IsEmpty(sortedDataMatrix(i, 1)) Then
+            wsControl.Cells(j, 2).Value = sortedDataMatrix(i, 1) ' Columna B
+            wsControl.Cells(j, 3).Value = sortedDataMatrix(i, 2) ' Columna C
+            wsControl.Cells(j, 4).Value = sortedDataMatrix(i, 4) ' Columna D
+            j = j + 1
+        End If
+    Next i
+
+    ' Abrir la pestaña "PAIS" y obtener los datos necesarios
+    Set wsPais = ThisWorkbook.Sheets("PAIS")
+    lastRowPais = wsPais.Cells(wsPais.Rows.Count, "A").End(xlUp).row
+
+    ' Crear un diccionario para almacenar los datos de la pestaña "PAIS"
+    Set paisDict = CreateObject("Scripting.Dictionary")
+    For i = 1 To lastRowPais
+        paisDict.Add wsPais.Cells(i, 1).Value, wsPais.Cells(i, 2).Value
+    Next i
+
+    ' Realizar el cruce de datos y actualizar la columna C de la pestaña "PANEL DE CONTROL"
+    For i = 3 To j - 1
+        paisValue = wsControl.Cells(i, 2).Value
+        If paisDict.Exists(paisValue) Then
+            wsControl.Cells(i, 5).Value = paisDict(paisValue)
+        Else
+            wsControl.Cells(i, 5).Value = ""
+        End If
+    Next i
+
+    ' Ajustar el ancho de las columnas
+    'wsControl.Columns("B:D").AutoFit
+
+    'MsgBox "Datos extraídos y pegados en la pestaña PANEL DE CONTROL."
+End Sub
+

@@ -1,0 +1,186 @@
+Sub rellenarformas2(st As String, ws As Worksheet, slide As Object, i As Integer)
+    Dim shape As Object
+    Dim msnValue As String
+    Dim stValue As String
+    Dim dateValue As String
+    Dim countryValue As String
+    Dim countryShape As Object
+    Dim banderaSlide As Worksheet
+    Dim banderaShape As Object
+    Dim panelSlide As Worksheet
+    Dim panelShapeP As Object
+    Dim panelShapeQ As Object
+    Dim avanceShape As Object
+    Dim pValue As String
+    Dim qValue As String
+    Dim profilesSlide As Worksheet
+    Dim profilesShape As Object
+    Dim accidentsShape As Object
+    Dim accidentsValue As String
+    Dim daysWithoutAccidents As String
+    Dim profileValue As String
+    Dim accidentValue As String
+    Dim savingValue As String
+    Dim savingShape As Object
+
+    ' Obtener los valores de las columnas B, C, D, E, P
+    msnValue = ws.Cells(i, 2).Value
+    stValue = ws.Cells(i, 3).Value
+    dateValue = "FINAL DATE " & ws.Cells(i, 4).Value
+    countryValue = ws.Cells(i, 5).Value
+    pValue = ws.Cells(i, 16).Value
+
+       If msnValue = "-" Then
+        ' Solo se muestra ST
+        Set shape = slide.Shapes("ST")
+        If Not shape Is Nothing Then shape.TextFrame.TextRange.Text = stValue
+
+        ' Leer valores desde la pestaña "PROFILES"
+        Set profilesSlide = ThisWorkbook.Sheets("PROFILES")
+        If Not profilesSlide Is Nothing Then
+            row = Application.Match(stValue, profilesSlide.Columns(1), 0)
+            If Not IsError(row) Then
+                profileValue = profilesSlide.Cells(row, 2).Value
+                accidentValue = profilesSlide.Cells(row, 4).Value
+                savingValue = profilesSlide.Cells(row, 5).Value
+
+                ' Actualizar la forma "PROFILES"
+                Set profilesShape = slide.Shapes("PROFILES")
+                If Not profilesShape Is Nothing Then
+                    profilesShape.TextFrame.TextRange.Text = profileValue
+                End If
+
+                ' Actualizar la forma "ACCIDENTS"
+                Set accidentsShape = slide.Shapes("ACCIDENTS")
+                If Not accidentsShape Is Nothing Then
+                    daysWithoutAccidents = "DAYS W/O ACCIDENTS"
+                    With accidentsShape.TextFrame.TextRange
+                        .Text = daysWithoutAccidents & vbCrLf & accidentValue
+                        .Font.Size = 22
+                        .Characters(Len(daysWithoutAccidents) + 2, Len(accidentValue)).Font.Size = 48
+                    End With
+                End If
+
+                ' Actualizar la forma "SAVING"
+                Set savingShape = slide.Shapes("SAVING")
+                If Not savingShape Is Nothing Then
+                    savingShape.TextFrame.TextRange.Text = "SAVING: " & savingValue
+                End If
+            End If
+        End If
+
+        ' En este caso, siempre insertar la forma "GRAF0" desde la hoja "PANEL DE CONTROL"
+        Set panelSlide = ThisWorkbook.Sheets("PANEL DE CONTROL")
+        If Not panelSlide Is Nothing Then
+            Set panelShapeP = panelSlide.Shapes("GRAF0")
+            If Not panelShapeP Is Nothing Then
+                panelShapeP.CopyPicture xlScreen, xlPicture
+                slide.Shapes.Paste.Select
+                Set avanceShape = slide.Shapes(slide.Shapes.Count)
+                With avanceShape
+                    .Height = 8 * 28.35
+                    .Width = 8 * 28.35
+                    .Top = slide.Master.Height * 0.65 - .Height
+                    .Left = (slide.Master.Width - .Width) / 1.04
+                End With
+            End If
+        End If
+
+        On Error GoTo 0
+        Exit Sub
+    
+    Else
+    
+        ' Asumiendo que las formas tienen nombres específicos
+        On Error Resume Next
+        Set shape = slide.Shapes("MSN")
+        If Not shape Is Nothing Then
+            shape.TextFrame.TextRange.Text = msnValue
+        End If
+
+        Set shape = slide.Shapes("ST")
+        If Not shape Is Nothing Then
+            shape.TextFrame.TextRange.Text = stValue
+        End If
+
+        Set shape = slide.Shapes("DATE")
+        If Not shape Is Nothing Then
+            shape.TextFrame.TextRange.Text = dateValue
+        End If
+        On Error GoTo 0
+
+        ' Buscar la forma del país en la pestaña "BANDERAS" del archivo de Excel
+        On Error Resume Next
+        Set banderaSlide = ThisWorkbook.Sheets("BANDERAS")
+        If Not banderaSlide Is Nothing Then
+            Set banderaShape = banderaSlide.Shapes(countryValue)
+            If Not banderaShape Is Nothing Then
+                ' Copiar la forma del país a la diapositiva actual
+                banderaShape.Copy
+                slide.Shapes.Paste.Select
+                Set countryShape = slide.Shapes(slide.Shapes.Count)
+                ' Ajustar la posición y el tamaño de la forma del país
+                countryShape.Top = slide.Master.Height * 0.12 - countryShape.Height / 1
+                countryShape.Left = (slide.Master.Width - countryShape.Width) / 1.6
+                countryShape.Height = 2.75 * 28.35 ' Establecer la altura a 2.75 cm
+                countryShape.Width = 2.75 * 28.35 ' Establecer la anchura a 2.75 cm
+            End If
+        End If
+        On Error GoTo 0
+
+        ' Buscar las formas en la pestaña "PANEL DE CONTROL"
+        On Error Resume Next
+        Set panelSlide = ThisWorkbook.Sheets("PANEL DE CONTROL")
+        If Not panelSlide Is Nothing Then
+            Set panelShapeP = panelSlide.Shapes(pValue)
+            If Not panelShapeP Is Nothing Then
+                ' Copiar las formas a la diapositiva actual
+                panelShapeP.CopyPicture xlScreen, xlPicture
+                slide.Shapes.Paste.Select
+                Set avanceShape = slide.Shapes(slide.Shapes.Count)
+                ' Ajustar la posición y el tamaño de las formas en "AVANCE"
+                avanceShape.Height = 8 * 28.35 ' Establecer la altura a 8 cm
+                avanceShape.Width = 8 * 28.35 ' Establecer la anchura a 8 cm
+                avanceShape.Top = slide.Master.Height * 0.65 - avanceShape.Height / 1
+                avanceShape.Left = (slide.Master.Width - avanceShape.Width) / 1.04
+            End If
+        End If
+        On Error GoTo 0
+
+        ' Leer valores de la pestaña "PROFILES"
+        On Error Resume Next
+        Set profilesSlide = ThisWorkbook.Sheets("PROFILES")
+        If Not profilesSlide Is Nothing Then
+            ' Buscar el valor correspondiente en la columna A
+            Dim row As Integer
+            row = Application.Match(stValue, profilesSlide.Columns(1), 0)
+            If Not IsError(row) Then
+                profileValue = profilesSlide.Cells(row, 2).Value
+                accidentValue = profilesSlide.Cells(row, 4).Value
+                savingValue = profilesSlide.Cells(row, 5).Value
+
+                ' Actualizar la forma "PROFILES"
+                Set profilesShape = slide.Shapes("PROFILES")
+                If Not profilesShape Is Nothing Then
+                    profilesShape.TextFrame.TextRange.Text = profileValue
+                End If
+
+                ' Actualizar la forma "ACCIDENTS"
+                Set accidentsShape = slide.Shapes("ACCIDENTS")
+                If Not accidentsShape Is Nothing Then
+                    daysWithoutAccidents = "DAYS W/O ACCIDENTS"
+                    accidentsShape.TextFrame.TextRange.Text = daysWithoutAccidents & vbCrLf & accidentValue
+                    accidentsShape.TextFrame.TextRange.Font.Size = 22
+                    accidentsShape.TextFrame.TextRange.Characters(Start:=Len(daysWithoutAccidents) + 2, Length:=Len(accidentValue)).Font.Size = 48
+                End If
+
+                ' Actualizar la forma "SAVING"
+                Set savingShape = slide.Shapes("SAVING")
+                If Not savingShape Is Nothing Then
+                    savingShape.TextFrame.TextRange.Text = "SAVING: " & savingValue
+                End If
+            End If
+        End If
+        On Error GoTo 0
+    End If
+End Sub

@@ -1,0 +1,99 @@
+
+Sub CruceAccidentalidad()
+    Dim wbExt As Workbook
+    Dim wsExt As Worksheet
+    Dim wsLocal As Worksheet
+    Dim ruta As String, archivo As String
+    Dim dict As Object
+    Dim ultLocal As Long, ultExt As Long
+    Dim i As Long, clave As String, fecha As Variant, estado As String
+    Dim stLocal As String, objetivo As Variant
+    Dim arrMap As Variant
+    
+    ' me descargo en tu boca
+
+    ruta = "\\spi60001.eadscasa.casa.corp\A400M\Lean_Manufacturing\3.- Formatos\05. FAL\09. Accidentalidad\"
+    archivo = "FECHA ACCIDENTE.xlsx"
+    
+    Set wsLocal = ThisWorkbook.Sheets("PROFILES")
+    
+    arrMap = Array( _
+        Array("ST06", Array("ST 14B A400M")), _
+        Array("ST08", Array("ST 14A A400M")), _
+        Array("ST14", Array("ST 15/30 A400M")), _
+        Array("ST30", Array("ST 15/30 A400M")), _
+        Array("ST35", Array("ST 35 A400M")), _
+        Array("ST40", Array("ST 50 A400M", "ST 40 A400M")), _
+        Array("ST60", Array("ST 60 A400M")), _
+        Array("ST70", Array("ST 70 A400M")), _
+        Array("ST72", Array("ST 72 A400M")) _
+    )
+    
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    Set wbExt = Workbooks.Open(ruta & archivo, ReadOnly:=True)
+    Set wsExt = wbExt.Sheets("FECHA ACCIDENTE")
+    
+    ultExt = wsExt.Cells(wsExt.Rows.Count, "C").End(xlUp).row
+    
+    ' === Cargar datos solo si columna B = "CON BAJA" ===
+    For i = 2 To ultExt
+        estado = UCase(Trim(Replace(wsExt.Cells(i, "B").Value, Chr(160), "")))
+        If estado = "CON BAJA" Then
+            
+            clave = Trim(Replace(wsExt.Cells(i, "C").Value, Chr(160), ""))
+            fecha = wsExt.Cells(i, "D").Value
+            
+            If clave <> "" And IsDate(fecha) Then
+                If Not dict.Exists(clave) Then
+                    dict.Add clave, CDate(fecha)
+                Else
+                    If CDate(fecha) > dict(clave) Then dict(clave) = CDate(fecha)
+                End If
+            End If
+        End If
+    Next i
+    
+    ultLocal = wsLocal.Cells(wsLocal.Rows.Count, "A").End(xlUp).row
+    
+    ' === Cruce ===
+    For i = 2 To ultLocal
+        stLocal = Trim(Replace(wsLocal.Cells(i, "A").Value, Chr(160), ""))
+
+        Dim j As Long
+        For j = LBound(arrMap) To UBound(arrMap)
+            If arrMap(j)(0) = stLocal Then
+                
+                objetivo = arrMap(j)(1)
+                
+                Dim mejorFecha As Date
+                mejorFecha = 0
+                
+                Dim k As Long
+                For k = LBound(objetivo) To UBound(objetivo)
+                    Dim claveBuscada As String
+                    claveBuscada = Trim(Replace(objetivo(k), Chr(160), ""))
+                    
+                    Dim claveDict As Variant
+                    For Each claveDict In dict.Keys
+                        If StrComp(Trim(claveDict), claveBuscada, vbTextCompare) = 0 Then
+                            If dict(claveDict) > mejorFecha Then mejorFecha = dict(claveDict)
+                        End If
+                    Next claveDict
+                Next k
+                
+                If mejorFecha <> 0 Then wsLocal.Cells(i, "C").Value = mejorFecha
+                
+                Exit For
+            End If
+        Next j
+    Next i
+    
+    wbExt.Close SaveChanges:=False
+    Application.ScreenUpdating = True
+End Sub
+
+

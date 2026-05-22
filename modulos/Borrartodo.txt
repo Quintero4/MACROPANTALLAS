@@ -1,0 +1,57 @@
+Sub BorrarArchivosPPTX()
+    Dim ws As Worksheet
+    Dim ultimaFila As Long
+    Dim i As Long
+    Dim ruta As String
+    Dim archivo As String
+    Dim fso As Object
+    Dim carpeta As Object
+    Dim subcarpeta As Object
+
+    ' Establecer la hoja de trabajo
+    Set ws = ThisWorkbook.Sheets("Rutas")
+
+    ' Encontrar la última fila con datos en la columna A
+    ultimaFila = ws.Cells(ws.Rows.Count, "A").End(xlUp).row
+
+    ' Crear una instancia de FileSystemObject
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    ' Recorrer cada celda en la columna A
+    For i = 1 To ultimaFila
+        ruta = ws.Cells(i, 1).Value
+
+        ' Verificar si la ruta no está vacía
+        If ruta <> "" Then
+            ' Verificar si la ruta existe
+            If fso.FolderExists(ruta) Then
+                ' Eliminar todos los archivos .pptx en la ruta
+                archivo = Dir(ruta & "\*.pptx")
+                Do While archivo <> ""
+                    Kill ruta & "\" & archivo
+                    archivo = Dir
+                Loop
+
+                ' Eliminar todas las carpetas dentro de la ruta
+                Application.Wait Now + TimeValue("0:00:05")
+                Set carpeta = fso.GetFolder(ruta)
+                For Each subcarpeta In carpeta.subFolders
+                    ' Establecer atributos a normal
+                    subcarpeta.Attributes = 0
+                    ' Intentar eliminar la carpeta
+                    On Error Resume Next
+                    fso.DeleteFolder subcarpeta.path, True
+                    If Err.Number <> 0 Then
+                        WScript.Echo "Error al eliminar la carpeta: " & subcarpeta.path & " - " & Err.Description
+                    End If
+                    On Error GoTo 0
+                Next subcarpeta
+            Else
+                ' Si la ruta no existe, pasar a la siguiente ruta
+                'MsgBox "La ruta '" & ruta & "' no existe. Pasando a la siguiente ruta."
+            End If
+        End If
+    Next i
+
+    'MsgBox "Archivos .pptx y carpetas borrados exitosamente."
+End Sub

@@ -1,0 +1,503 @@
+Sub CopiarDiapositivasComoImagenes0()
+
+    Dim pptApp As Object
+    Dim pptSource As Object
+    Dim pptTemplate As Object
+    Dim slide As Object
+    Dim slideIndex As Integer
+    Dim imgPath As String
+    Dim sourceFolder As String
+    Dim destFile As String
+    Dim fileName As String
+    Dim fileCount As Integer
+    Dim slideDest As Object
+    Dim i As Integer
+    Dim j As Integer
+    Dim fileType As String
+    Dim imgShape As Object
+    Dim tempFiles As Collection
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim st As String
+    Dim msn As String
+    Dim areaFolder As String
+    Dim areaFileCount As Integer
+    Dim totalSlides As Integer
+    Dim areaFolder2 As String
+    Dim areaFileCount2 As Integer
+    Dim archivo As String
+
+    ' Ruta de la carpeta de origen
+    sourceFolder = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\1. General\"
+
+    ' Ruta del archivo de PowerPoint de plantilla
+    Dim templateFile As String
+    templateFile = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\Template\Template.pptx"
+
+    ' Crear una nueva instancia de PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    pptApp.Visible = True
+
+    ' Obtener la hoja de cálculo con los ST y MSN
+    Set ws = ThisWorkbook.Sheets("PANEL DE CONTROL")
+    lastRow = ws.Cells(ws.Rows.Count, "C").End(xlUp).row
+
+    ' Procesar cada ST en la hoja de cálculo
+    For i = 3 To lastRow
+        st = ws.Cells(i, 3).Value
+        msn = ws.Cells(i, 2).Value
+        
+        If msn = "-" Then
+        destFile = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\" & st & "\Pantalla_" & st & "_" & "NA" & ".pptx"
+        Else
+        destFile = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\" & st & "\Pantalla_" & st & "_" & msn & ".pptx"
+        End If
+      
+
+        ' Abrir el archivo de plantilla
+        Set pptTemplate = pptApp.Presentations.Open(templateFile)
+
+        ' Llamar a la función rellenarformas antes de duplicar las diapositivas
+        Call rellenarformas(st, ws, pptTemplate.Slides(1), i)
+
+        ' Contar cuántos archivos .pptx e imágenes hay en la carpeta de origen
+        fileCount = 0
+        fileName = Dir(sourceFolder & "*.pptx")
+        Do While fileName <> ""
+            fileCount = fileCount + 1
+            fileName = Dir
+        Loop
+
+        fileName = Dir(sourceFolder & "*.png")
+        Do While fileName <> ""
+            fileCount = fileCount + 1
+            fileName = Dir
+        Loop
+
+        fileName = Dir(sourceFolder & "*.jpg")
+        Do While fileName <> ""
+            fileCount = fileCount + 1
+            fileName = Dir
+        Loop
+
+        fileName = Dir(sourceFolder & "*.jpeg")
+        Do While fileName <> ""
+            fileCount = fileCount + 1
+            fileName = Dir
+        Loop
+
+        ' Contar cuántos archivos de imagen hay en la carpeta específica del ST
+        areaFileCount = 0
+        Select Case st
+            Case "ST06", "ST08"
+                areaFolder = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\3. FL\ST14B\"
+            Case "ST14"
+                areaFolder = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\3. FL\ST14A\"
+            Case "ST30"
+                areaFolder = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\ST30\"
+            Case "ST35"
+                areaFolder = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\ST35\"
+            Case "ST40"
+                areaFolder = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\ST40\"
+            Case "ST60"
+                areaFolder = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\ST60\"
+            Case "ST70", "ST72"
+                areaFolder = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\ST70-72\"
+            Case Else
+                areaFolder = ""
+        End Select
+
+        If areaFolder <> "" Then
+            fileName = Dir(areaFolder & "*.pptx")
+            Do While fileName <> ""
+                areaFileCount = areaFileCount + 1
+                fileName = Dir
+            Loop
+
+            fileName = Dir(areaFolder & "*.png")
+            Do While fileName <> ""
+                areaFileCount = areaFileCount + 1
+                fileName = Dir
+            Loop
+
+            fileName = Dir(areaFolder & "*.jpg")
+            Do While fileName <> ""
+                areaFileCount = areaFileCount + 1
+                fileName = Dir
+            Loop
+
+            fileName = Dir(areaFolder & "*.jpeg")
+            Do While fileName <> ""
+                areaFileCount = areaFileCount + 1
+                fileName = Dir
+            Loop
+        End If
+
+        ' Contar cuántos archivos de imagen hay en la carpeta específica del Área
+        areaFileCount2 = 0
+        Select Case st
+            Case "ST06", "ST08"
+                areaFolder2 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\3. FL\"
+            Case "ST14"
+                areaFolder2 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\3. FL\"
+            Case "ST30"
+                areaFolder2 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\"
+            Case "ST35"
+                areaFolder2 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\"
+            Case "ST40"
+                areaFolder2 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\"
+            Case "ST60"
+                areaFolder2 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\"
+            Case "ST70", "ST72"
+                areaFolder2 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Diapositivas\2. AST\"
+            Case Else
+                areaFolder2 = ""
+        End Select
+
+        If areaFolder2 <> "" Then
+            fileName = Dir(areaFolder2 & "*.pptx")
+            Do While fileName <> ""
+                areaFileCount2 = areaFileCount2 + 1
+                fileName = Dir
+            Loop
+
+            fileName = Dir(areaFolder2 & "*.png")
+            Do While fileName <> ""
+                areaFileCount2 = areaFileCount2 + 1
+                fileName = Dir
+            Loop
+
+            fileName = Dir(areaFolder2 & "*.jpg")
+            Do While fileName <> ""
+                areaFileCount2 = areaFileCount2 + 1
+                fileName = Dir
+            Loop
+
+            fileName = Dir(areaFolder2 & "*.jpeg")
+            Do While fileName <> ""
+                areaFileCount2 = areaFileCount2 + 1
+                fileName = Dir
+            Loop
+        End If
+
+        ' Total de diapositivas a añadir
+        totalSlides = fileCount + areaFileCount + areaFileCount2
+
+        ' Duplicar la primera diapositiva de la plantilla según el número total de diapositivas
+        For j = 1 To totalSlides - 1
+            pptTemplate.Slides(1).Duplicate
+        Next j
+
+        ' Crear una colección para rastrear las imágenes temporales
+        Set tempFiles = New Collection
+
+        ' Procesar cada archivo .pptx en la carpeta de origen
+        j = 1
+        fileType = "*.pptx"
+        fileName = Dir(sourceFolder & fileType)
+        Do While fileName <> ""
+            ' Abrir el archivo de origen
+            On Error Resume Next ' Manejo de errores
+            Set pptSource = pptApp.Presentations.Open(sourceFolder & fileName)
+            On Error GoTo 0 ' Desactivar manejo de errores
+
+            ' Verificar si pptSource se abrió correctamente
+            If Not pptSource Is Nothing Then
+                ' Seleccionar la diapositiva que deseas copiar (por ejemplo, la primera diapositiva)
+                slideIndex = 1 ' Cambia esto al índice de la diapositiva que deseas copiar
+                Set slide = pptSource.Slides(slideIndex)
+
+                ' Exportar la diapositiva como imagen
+                imgPath = Environ("TEMP") & "\slide_image_" & j & ".png"
+                slide.Export imgPath, "PNG"
+
+                ' Añadir el archivo temporal a la colección
+                tempFiles.Add imgPath
+
+                ' Seleccionar la diapositiva donde se pegará la imagen
+                Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+                ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+                Set imgShape = slideDest.Shapes.AddPicture(imgPath, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+                imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+                imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+                imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+                ' Cerrar el archivo de origen
+                Application.Wait Now + TimeValue("0:00:05")
+                pptSource.Close
+                Set pptSource = Nothing ' Limpiar la variable
+            Else
+                MsgBox "No se pudo abrir el archivo: " & fileName, vbExclamation
+            End If
+
+            ' Obtener el siguiente archivo
+            fileName = Dir
+            j = j + 1
+        Loop
+
+        ' Procesar cada archivo de imagen en la carpeta de origen
+        fileType = "*.png"
+        fileName = Dir(sourceFolder & fileType)
+        Do While fileName <> ""
+            ' Seleccionar la diapositiva donde se pegará la imagen
+            Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+            ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+            Set imgShape = slideDest.Shapes.AddPicture(sourceFolder & fileName, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+            imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+            imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+            imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+            ' Obtener el siguiente archivo
+            fileName = Dir
+            j = j + 1
+        Loop
+
+        fileType = "*.jpg"
+        fileName = Dir(sourceFolder & fileType)
+        Do While fileName <> ""
+            ' Seleccionar la diapositiva donde se pegará la imagen
+            Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+            ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+            Set imgShape = slideDest.Shapes.AddPicture(sourceFolder & fileName, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+            imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+            imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+            imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+            ' Obtener el siguiente archivo
+            fileName = Dir
+            j = j + 1
+        Loop
+
+        fileType = "*.jpeg"
+        fileName = Dir(sourceFolder & fileType)
+        Do While fileName <> ""
+            ' Seleccionar la diapositiva donde se pegará la imagen
+            Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+            ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+            Set imgShape = slideDest.Shapes.AddPicture(sourceFolder & fileName, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+            imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+            imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+            imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+            ' Obtener el siguiente archivo
+            fileName = Dir
+            j = j + 1
+        Loop
+
+        ' Procesar imágenes adicionales de la carpeta de área correspondiente
+        If areaFolder <> "" Then
+            fileType = "*.pptx"
+            fileName = Dir(areaFolder & fileType)
+            Do While fileName <> ""
+                ' Abrir el archivo de origen
+                On Error Resume Next ' Manejo de errores
+                Set pptSource = pptApp.Presentations.Open(areaFolder & fileName)
+                On Error GoTo 0 ' Desactivar manejo de errores
+
+                ' Verificar si pptSource se abrió correctamente
+                If Not pptSource Is Nothing Then
+                    ' Seleccionar la diapositiva que deseas copiar (por ejemplo, la primera diapositiva)
+                    slideIndex = 1 ' Cambia esto al índice de la diapositiva que deseas copiar
+                    Set slide = pptSource.Slides(slideIndex)
+
+                    ' Exportar la diapositiva como imagen
+                    imgPath = Environ("TEMP") & "\slide_image_" & j & ".png"
+                    slide.Export imgPath, "PNG"
+
+                    ' Añadir el archivo temporal a la colección
+                    tempFiles.Add imgPath
+
+                    ' Seleccionar la diapositiva donde se pegará la imagen
+                    Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+                    ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+                    Set imgShape = slideDest.Shapes.AddPicture(imgPath, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+                    imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+                    imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+                    imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+                    ' Cerrar el archivo de origen
+                    pptSource.Close
+                    Set pptSource = Nothing ' Limpiar la variable
+                Else
+                    MsgBox "No se pudo abrir el archivo: " & fileName, vbExclamation
+                End If
+
+                ' Obtener el siguiente archivo
+                fileName = Dir
+                j = j + 1
+            Loop
+
+            fileType = "*.png"
+            fileName = Dir(areaFolder & fileType)
+            Do While fileName <> ""
+                ' Seleccionar la diapositiva donde se pegará la imagen
+                Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+                ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+                Set imgShape = slideDest.Shapes.AddPicture(areaFolder & fileName, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+                imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+                imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+                imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+                ' Obtener el siguiente archivo
+                fileName = Dir
+                j = j + 1
+            Loop
+
+            fileType = "*.jpg"
+            fileName = Dir(areaFolder & fileType)
+            Do While fileName <> ""
+                ' Seleccionar la diapositiva donde se pegará la imagen
+                Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+                ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+                Set imgShape = slideDest.Shapes.AddPicture(areaFolder & fileName, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+                imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+                imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+                imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+                ' Obtener el siguiente archivo
+                fileName = Dir
+                j = j + 1
+            Loop
+
+            fileType = "*.jpeg"
+            fileName = Dir(areaFolder & fileType)
+            Do While fileName <> ""
+                ' Seleccionar la diapositiva donde se pegará la imagen
+                Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+                ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+                Set imgShape = slideDest.Shapes.AddPicture(areaFolder & fileName, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+                imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+                imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+                imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+                ' Obtener el siguiente archivo
+                fileName = Dir
+                j = j + 1
+            Loop
+        End If
+
+        ' Procesar imágenes adicionales de la carpeta de área correspondiente 2
+        If areaFolder2 <> "" Then
+            fileType = "*.pptx"
+            fileName = Dir(areaFolder2 & fileType)
+            Do While fileName <> ""
+                ' Abrir el archivo de origen
+                On Error Resume Next ' Manejo de errores
+                Set pptSource = pptApp.Presentations.Open(areaFolder2 & fileName)
+                On Error GoTo 0 ' Desactivar manejo de errores
+
+                ' Verificar si pptSource se abrió correctamente
+                If Not pptSource Is Nothing Then
+                    ' Seleccionar la diapositiva que deseas copiar (por ejemplo, la primera diapositiva)
+                    slideIndex = 1 ' Cambia esto al índice de la diapositiva que deseas copiar
+                    Set slide = pptSource.Slides(slideIndex)
+
+                    ' Exportar la diapositiva como imagen
+                    imgPath = Environ("TEMP") & "\slide_image_" & j & ".png"
+                    slide.Export imgPath, "PNG"
+
+                    ' Añadir el archivo temporal a la colección
+                    tempFiles.Add imgPath
+
+                    ' Seleccionar la diapositiva donde se pegará la imagen
+                    Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+                    ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+                    Set imgShape = slideDest.Shapes.AddPicture(imgPath, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+                    imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+                    imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+                    imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+                    ' Cerrar el archivo de origen
+                    pptSource.Close
+                    Set pptSource = Nothing ' Limpiar la variable
+                Else
+                    MsgBox "No se pudo abrir el archivo: " & fileName, vbExclamation
+                End If
+
+                ' Obtener el siguiente archivo
+                fileName = Dir
+                j = j + 1
+            Loop
+
+            fileType = "*.png"
+            fileName = Dir(areaFolder2 & fileType)
+            Do While fileName <> ""
+                ' Seleccionar la diapositiva donde se pegará la imagen
+                Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+                ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+                Set imgShape = slideDest.Shapes.AddPicture(areaFolder2 & fileName, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+                imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+                imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+                imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+                ' Obtener el siguiente archivo
+                fileName = Dir
+                j = j + 1
+            Loop
+
+            fileType = "*.jpg"
+            fileName = Dir(areaFolder2 & fileType)
+            Do While fileName <> ""
+                ' Seleccionar la diapositiva donde se pegará la imagen
+                Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+                ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+                Set imgShape = slideDest.Shapes.AddPicture(areaFolder2 & fileName, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+                imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+                imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+                imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+                ' Obtener el siguiente archivo
+                fileName = Dir
+                j = j + 1
+            Loop
+
+            fileType = "*.jpeg"
+            fileName = Dir(areaFolder2 & fileType)
+            Do While fileName <> ""
+                ' Seleccionar la diapositiva donde se pegará la imagen
+                Set slideDest = pptTemplate.Slides(j) ' La primera imagen en la diapositiva original, la segunda en la copia
+
+                ' Pegar la imagen en la esquina inferior izquierda de la diapositiva actual del archivo de plantilla
+                Set imgShape = slideDest.Shapes.AddPicture(areaFolder2 & fileName, msoFalse, msoTrue, 0, slideDest.Master.Height - (13 * 28.35)) ' Ajusta la altura a 15 cm
+                imgShape.LockAspectRatio = msoTrue ' Mantener la relación de aspecto
+                imgShape.Height = 13 * 28.35 ' Establecer la altura a 15 cm
+                imgShape.Top = slideDest.Master.Height - imgShape.Height ' Ajustar la posición en la parte inferior
+
+                ' Obtener el siguiente archivo
+                fileName = Dir
+                j = j + 1
+            Loop
+        End If
+
+        ' Guardar la presentación de destino
+        pptTemplate.SaveAs destFile ' Guardar la presentación de plantilla con las imágenes pegadas
+        pptTemplate.Close
+
+        ' Limpiar
+        Set slide = Nothing
+        Set pptTemplate = Nothing
+
+        ' Eliminar las imágenes temporales
+        Dim tempFile As Variant
+        For Each tempFile In tempFiles
+            On Error Resume Next ' Manejo de errores
+            Kill tempFile
+            On Error GoTo 0 ' Desactivar manejo de errores
+        Next tempFile
+    Next i
+
+    ' Cerrar la instancia de PowerPoint
+    pptApp.Quit
+    Set pptApp = Nothing
+End Sub

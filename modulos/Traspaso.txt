@@ -1,0 +1,46 @@
+Sub TraspasoArchivos()
+    Dim fuenteST14 As String
+    Dim destinoST30 As String
+    Dim fuenteST72 As String
+    Dim destinoST70 As String
+    Dim archivo As String
+    Dim fs As Object
+    Dim f As Object
+
+    ' Definir las rutas de origen y destino
+    fuenteST14 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST14"
+    destinoST30 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST30"
+    fuenteST72 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST72"
+    destinoST70 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST70"
+    fuenteST06 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST06"
+    destinoST08 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST08"
+
+    ' Crear un objeto FileSystem
+    Set fs = CreateObject("Scripting.FileSystemObject")
+
+    ' Copiar archivos de ST14 a ST30
+'    archivo = Dir(fuenteST14 & "\*.pptx")
+'    Do While archivo <> ""
+'        fs.CopyFile fuenteST14 & "\" & archivo, destinoST30 & "\" & archivo
+'        archivo = Dir
+'    Loop
+
+    ' Copiar archivos de ST72 a ST70
+    archivo = Dir(fuenteST72 & "\*.pptx")
+    Do While archivo <> ""
+        fs.CopyFile fuenteST72 & "\" & archivo, destinoST70 & "\" & archivo
+        archivo = Dir
+    Loop
+    
+    ' Copiar archivos de ST06 a ST08
+    archivo = Dir(fuenteST06 & "\*.pptx")
+    Do While archivo <> ""
+        fs.CopyFile fuenteST06 & "\" & archivo, destinoST08 & "\" & archivo
+        archivo = Dir
+    Loop
+
+    ' Liberar el objeto FileSystem
+    Set fs = Nothing
+
+    'MsgBox "Archivos copiados exitosamente."
+End Sub

@@ -1,0 +1,108 @@
+Sub CruzarDatos()
+    Dim wsPanel As Worksheet
+    Dim wsSGM As Worksheet
+    Dim wsDepurada As Worksheet
+    Dim wbDepurada As Workbook
+    Dim lastRowPanel As Long
+    Dim i As Long
+    Dim msn As String
+    Dim msnNumeric As String
+    Dim estacion As String
+    Dim filePath As String
+    Dim filterRange As Range
+    Dim filterCell As Range
+    Dim sumV As Double
+    Dim sumY As Double
+
+    ' Establecer las hojas de trabajo
+    Set wsPanel = ThisWorkbook.Sheets("PANEL DE CONTROL")
+    Set wsSGM = ThisWorkbook.Sheets("SGM")
+
+    ' Encontrar la última fila con datos en la pestaña PANEL DE CONTROL
+    lastRowPanel = wsPanel.Cells(wsPanel.Rows.Count, "B").End(xlUp).row
+
+    ' Borrar el rango de G a J desde la fila 3 hasta la última fila con datos
+    If lastRowPanel > 2 Then
+        wsPanel.Range("G3:J" & lastRowPanel).ClearContents
+        wsPanel.Range("P3:Q" & lastRowPanel).ClearContents
+    End If
+
+    ' Recorrer cada fila en la pestaña PANEL DE CONTROL
+    For i = 3 To lastRowPanel
+        msn = wsPanel.Cells(i, 2).Value
+        estacion = wsPanel.Cells(i, 3).Value
+
+        ' Verificar si el valor de MSN es un guion ("-")
+        If msn = "-" Then
+            wsPanel.Cells(i, 7).Value = "-"
+            wsPanel.Cells(i, 8).Value = "-"
+            wsPanel.Cells(i, 9).Value = "-"
+            wsPanel.Cells(i, 10).Value = "-"
+            GoTo NextIteration
+        End If
+
+        ' Extraer los dígitos numéricos de MSN
+        msnNumeric = Mid(msn, 4)
+
+        ' Construir la ruta del archivo depurada
+        filePath = "\\Spi60001\a400m\Planificacion\PRRM\ZINF_DEPURADA\depurada_ZINF_" & Format(msnNumeric, "0000") & ".xlsm"
+
+        ' Abrir el archivo depurada en modo de solo lectura
+        On Error Resume Next
+        Set wbDepurada = Workbooks.Open(filePath, ReadOnly:=True)
+        On Error GoTo 0
+
+        If wbDepurada Is Nothing Then
+            MsgBox "El archivo " & filePath & " no se encontró.", vbExclamation
+            GoTo NextIteration
+        End If
+
+        ' Establecer la hoja de trabajo depurada
+        Set wsDepurada = wbDepurada.Sheets("Hoja1")
+
+        ' Encontrar los valores de filtro para la estación en la pestaña SGM
+        Set filterRange = wsSGM.Range("B2:J2").Find(What:=estacion, LookIn:=xlValues, LookAt:=xlWhole)
+        If filterRange Is Nothing Then
+            MsgBox "La estación " & estacion & " no se encontró en la pestaña SGM.", vbExclamation
+            GoTo NextIteration
+        End If
+
+        ' Obtener el rango de valores de filtro
+        Set filterRange = wsSGM.Range(wsSGM.Cells(3, filterRange.Column), wsSGM.Cells(wsSGM.Rows.Count, filterRange.Column).End(xlUp))
+
+        ' Inicializar las sumas
+        sumV = 0
+        sumY = 0
+
+        ' Recorrer cada valor de filtro y sumar los valores de V e Y
+        For Each filterCell In filterRange
+            sumV = sumV + Application.WorksheetFunction.SumIf(wsDepurada.Range("T:T"), filterCell.Value, wsDepurada.Range("V:V"))
+            sumY = sumY + Application.WorksheetFunction.SumIf(wsDepurada.Range("T:T"), filterCell.Value, wsDepurada.Range("Y:Y"))
+        Next filterCell
+
+        ' Escribir los resultados en el archivo principal
+        wsPanel.Cells(i, 7).Value = sumV
+        wsPanel.Cells(i, 9).Value = sumY
+
+        ' Calcular el valor de H (G - I)
+        wsPanel.Cells(i, 8).Value = sumV - sumY
+
+        ' Calcular el valor de J (H / G)
+        If sumV <> 0 Then
+            wsPanel.Cells(i, 10).Value = wsPanel.Cells(i, 8).Value / sumV
+        Else
+            wsPanel.Cells(i, 10).Value = 0
+        End If
+
+        ' Escribir los valores en las columnas P y Q
+        wsPanel.Cells(i, 16).Value = "GRAF" & i - 2
+        wsPanel.Cells(i, 17).Value = "AVAN" & i - 2
+
+        ' Cerrar el archivo depurada
+        wbDepurada.Close SaveChanges:=False
+
+NextIteration:
+    Next i
+
+    'MsgBox "Proceso completado.", vbInformation
+End Sub

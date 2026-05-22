@@ -1,0 +1,82 @@
+Sub ConvertPPTXtoJPG()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slideIndex As Long
+    Dim outputFolder As String
+    Dim slideImagePath As String
+    Dim pptxPath As String
+    Dim fileName As String
+    Dim folderPath As String
+    Dim file As Object
+    Dim fso As Object
+
+    ' Establecer la hoja de trabajo
+    Set ws = ThisWorkbook.Sheets("Rutas")
+
+    ' Encontrar la última fila con datos en la columna A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).row
+
+    ' Crear una instancia de PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    pptApp.Visible = True
+
+    ' Crear una instancia de FileSystemObject
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    ' Procesar cada ruta en la columna A
+    For i = 1 To lastRow
+        folderPath = ws.Cells(i, 1).Value
+
+        If Dir(folderPath, vbDirectory) <> "" Then
+            ' Buscar todos los archivos PPTX en la carpeta
+            Set file = fso.GetFolder(folderPath).Files
+
+            For Each file In file
+                If LCase(file.Name) Like "*.pptx" Then
+                    pptxPath = folderPath & "\" & file.Name
+
+                    ' Verificar si el archivo existe
+                    If fso.FileExists(pptxPath) Then
+                        On Error GoTo ErrorHandler
+                        ' Abrir la presentación
+                        Set pptPres = pptApp.Presentations.Open(pptxPath)
+
+                        ' Crear una carpeta de salida con el nombre del archivo PPTX
+                        outputFolder = folderPath & "\" & Left(file.Name, InStrRev(file.Name, ".") - 1)
+                        If Dir(outputFolder, vbDirectory) = "" Then
+                            MkDir outputFolder
+                        End If
+
+                        ' Convertir cada diapositiva a una imagen JPG
+                        For slideIndex = 1 To pptPres.Slides.Count
+                            slideImagePath = outputFolder & "\slide_" & slideIndex & ".png"
+                            pptPres.Slides(slideIndex).Export slideImagePath, "PNG"
+                        Next slideIndex
+
+                        ' Cerrar la presentación
+                        pptPres.Close
+                        Set pptPres = Nothing
+                    End If
+                End If
+            Next file
+        End If
+    Next i
+
+    ' Cerrar PowerPoint
+    pptApp.Quit
+    Set pptApp = Nothing
+
+    'MsgBox "Conversión completa."
+    Exit Sub
+
+ErrorHandler:
+    'MsgBox "Ocurrió un error al procesar el archivo: " & pptxPath & vbCrLf & "Error: " & Err.Description
+    If Not pptPres Is Nothing Then
+        pptPres.Close
+        Set pptPres = Nothing
+    End If
+    Resume Next
+End Sub
