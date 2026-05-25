@@ -1,0 +1,97 @@
+Sub ConvertPPTXtoMP4()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim folderPath As String
+    Dim pptxPath As String
+    Dim mp4Path As String
+    Dim fso As Object
+    Dim file As Object
+    Dim folder As Object
+    Dim videoStatus As Long
+
+    ' Establecer la hoja de trabajo de donde se leen las rutas
+    Set ws = ThisWorkbook.Sheets("Rutas")
+
+    ' Encontrar la última fila con datos en la columna A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+
+    ' Crear instancias de PowerPoint y FileSystemObject
+    Set pptApp = CreateObject("PowerPoint.Application")
+    pptApp.Visible = True
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    ' Procesar cada ruta en la columna A
+    For i = 1 To lastRow
+        folderPath = ws.Cells(i, 1).Value
+
+        ' Verificar si la ruta del directorio existe
+        If Dir(folderPath, vbDirectory) <> "" Then
+            Set folder = fso.GetFolder(folderPath)
+            
+            ' Buscar todos los archivos dentro de la carpeta (Procesará los 3 MSN uno por uno)
+            For Each file In folder.Files
+                ' Filtrar solo archivos PPTX (evitando los archivos temporales de Office)
+                If LCase(file.Name) Like "*.pptx" And Not LCase(file.Name) Like "~$*" Then
+                    
+                    pptxPath = folderPath & "\" & file.Name
+                    
+                    ' Definir el nombre específico para el MP4 basado en el nombre del PPTX (ej. ST06_MSN1.mp4)
+                    mp4Path = folderPath & "\" & Left(file.Name, InStrRev(file.Name, ".") - 1) & ".mp4"
+
+                    ' Garantizar la sobrescritura borrando el archivo antiguo si existe
+                    If fso.FileExists(mp4Path) Then
+                        On Error Resume Next
+                        Kill mp4Path
+                        On Error GoTo 0
+                    End If
+
+                    ' Abrir la presentación de manera explícita
+                    Set pptPres = pptApp.Presentations.Open(pptxPath, WithWindow:=False)
+
+                    ' Iniciar la creación del video (5 segundos por diapositiva, 1080p)
+                    pptPres.CreateVideo mp4Path, False, 5, 1080, 30, 85
+
+                    ' Esperar un momento a que PowerPoint registre la tarea de video
+                    Application.Wait Now + TimeValue("0:00:02")
+
+                    ' BUCLE DE ESPERA SEGURO
+                    Do
+                        DoEvents ' Evita que Excel se congele y permite actualizar la pantalla
+                        Application.Wait Now + TimeValue("0:00:01")
+                        
+                        ' Capturamos el estado en una variable para evitar fluctuaciones
+                        On Error Resume Next
+                        videoStatus = pptPres.CreateVideoStatus
+                        On Error GoTo 0
+                        
+                        ' Si el estado es 3 (Terminado) o 4 (Error), salimos del bucle de espera
+                        If videoStatus = 3 Or videoStatus = 4 Then Exit Do
+                    Loop
+
+                    ' Si falló, puedes registrar un aviso en la ventana de inmediato, pero cerramos igual
+                    If videoStatus = 4 Then
+                        Debug.Print "Error al convertir el archivo: " & file.Name
+                    End If
+
+                    ' Cerrar la presentación guardando cambios y liberar el objeto actual antes del siguiente MSN
+                    pptPres.Close
+                    Set pptPres = Nothing
+                    
+                    ' Pequeña pausa de alivio para el procesador entre archivos
+                    Application.Wait Now + TimeValue("0:00:01")
+                End If
+            Next file
+        End If
+    Next i
+
+    ' Cerrar la aplicación de PowerPoint y liberar memoria de forma limpia
+    pptApp.Quit
+    Set pptApp = Nothing
+    Set fso = Nothing
+    
+    MsgBox "¡Conversión a MP4 finalizada con éxito para todas las estaciones y MSNs!", vbInformation
+
+End Sub
