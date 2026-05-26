@@ -9,50 +9,57 @@ Sub BorrarArchivosPPTX()
     Dim subcarpeta As Object
 
     ' Establecer la hoja de trabajo
-    Set ws = ThisWorkbook.Sheets("Rutas") 
+    Set ws = ThisWorkbook.Sheets("Rutas")
 
     ' Encontrar la última fila con datos en la columna A
-    ultimaFila = ws.Cells(ws.Rows.Count, "A").End(xlUp).row 
+    ultimaFila = ws.Cells(ws.Rows.Count, "A").End(xlUp).row
 
     ' Crear una instancia de FileSystemObject
-    Set fso = CreateObject("Scripting.FileSystemObject") [cite: 1-2]
+    Set fso = CreateObject("Scripting.FileSystemObject")
 
     ' Recorrer cada celda en la columna A
-    For i = 1 To ultimaFila [cite: 2]
-        ruta = ws.Cells(i, 1).Value [cite: 2]
+    For i = 1 To ultimaFila
+        ruta = ws.Cells(i, 1).Value
 
         ' Verificar si la ruta no está vacía
-        If ruta <> "" Then [cite: 2]
+        If ruta <> "" Then
             ' Verificar si la ruta existe
-            If fso.FolderExists(ruta) Then [cite: 2]
+            If fso.FolderExists(ruta) Then
  
-                ' 1. Eliminar todos los archivos .pptx en la ruta [cite: 3]
-                archivo = Dir(ruta & "\*.pptx") [cite: 3]
-                Do While archivo <> "" [cite: 3]
-                    Kill ruta & "\" & archivo [cite: 3]
-                    archivo = Dir [cite: 4]
-                Loop
-
-                ' 2. Eliminar todos los archivos .mp4 en la ruta (Añadido)
-                archivo = Dir(ruta & "\*.mp4")
+                ' 1. Eliminar todos los archivos .pptx en la ruta
+                archivo = Dir(ruta & "\*.pptx")
                 Do While archivo <> ""
+                    On Error Resume Next
                     Kill ruta & "\" & archivo
+                    On Error GoTo 0
                     archivo = Dir
                 Loop
 
-                ' Eliminar todas las carpetas dentro de la ruta [cite: 4]
-                Application.Wait Now + TimeValue("0:00:05") [cite: 4]
-                Set carpeta = fso.GetFolder(ruta) [cite: 4]
-            
-                For Each subcarpeta In carpeta.subFolders [cite: 5]
-                    ' Establecer atributos a normal
-                    subcarpeta.Attributes = 0 [cite: 5]
+                ' 2. Eliminar todos los archivos .mp4 en la ruta
+                archivo = Dir(ruta & "\*.mp4")
+                Do While archivo <> ""
+                    On Error Resume Next
+                    Kill ruta & "\" & archivo
+                    On Error GoTo 0
+                    archivo = Dir
+                Loop
+
+                ' Esperar un momento para que Windows libere los archivos antes de borrar carpetas
+                Application.Wait Now + TimeValue("0:00:02")
+                
+                ' 3. Eliminar todas las subcarpetas dentro de la ruta
+                Set carpeta = fso.GetFolder(ruta)
+                For Each subcarpeta In carpeta.subFolders
+                    ' Establecer atributos a normal por si están protegidas
+                    subcarpeta.Attributes = 0
                     ' Intentar eliminar la carpeta
-                    On Error Resume Next [cite: 5-6]
-                    fso.DeleteFolder subcarpeta.path, True [cite: 6]
-                    On Error GoTo 0 [cite: 7]
+                    On Error Resume Next
+                    fso.DeleteFolder subcarpeta.path, True
+                    On Error GoTo 0
                 Next subcarpeta
-            End If
-        End If
-    Next i
+
+            End If ' Cierre de: If fso.FolderExists(ruta)
+        End If ' Cierre de: If ruta <> ""
+    Next i ' Cierre de: For i = 1 To ultimaFila
+    
 End Sub
