@@ -1,0 +1,71 @@
+Sub TraspasoArchivos()
+    Dim fuenteST14 As String
+    Dim destinoST30 As String
+    Dim fuenteST72 As String
+    Dim destinoST70 As String
+    Dim fuenteST06 As String
+    Dim destinoST08 As String
+    Dim archivo As String
+    Dim fs As Object
+
+    ' Definir las rutas de origen y destino
+    fuenteST14 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST14" 
+    destinoST30 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST30" 
+    fuenteST72 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST72" [cite: 10-11]
+    destinoST70 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST70" [cite: 11]
+    fuenteST06 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST06" [cite: 11]
+    destinoST08 = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST08" [cite: 11-12]
+
+    ' Crear un objeto FileSystem
+    Set fs = CreateObject("Scripting.FileSystemObject") 
+
+    ' =========================================================
+    ' Copiar archivos de ST14 a ST30 (Descomentar si es necesario)
+    ' =========================================================
+    ' archivo = Dir(fuenteST14 & "\*.pptx")
+    ' Do While archivo <> ""
+    '     fs.CopyFile fuenteST14 & "\" & archivo, destinoST30 & "\" & archivo
+    '     archivo = Dir
+    ' Loop
+    ' archivo = Dir(fuenteST14 & "\*.mp4")
+    ' Do While archivo <> ""
+    '     fs.CopyFile fuenteST14 & "\" & archivo, destinoST30 & "\" & archivo
+    '     archivo = Dir
+    ' Loop
+
+    ' =========================================================
+    ' Copiar archivos de ST72 a ST70
+    ' =========================================================
+    ' 1. Copiar PPTX 
+    archivo = Dir(fuenteST72 & "\*.pptx") 
+    Do While archivo <> "" 
+        fs.CopyFile fuenteST72 & "\" & archivo, destinoST70 & "\" & archivo [cite: 13]
+        archivo = Dir [cite: 13]
+    Loop
+    ' 2. Copiar MP4 (Añadido)
+    archivo = Dir(fuenteST72 & "\*.mp4")
+    Do While archivo <> ""
+        fs.CopyFile fuenteST72 & "\" & archivo, destinoST70 & "\" & archivo
+        archivo = Dir
+    Loop
+    
+    ' =========================================================
+    ' Copiar archivos de ST06 a ST08
+    ' =========================================================
+    ' 1. Copiar PPTX [cite: 13]
+    archivo = Dir(fuenteST06 & "\*.pptx") [cite: 13]
+    Do While archivo <> "" [cite: 13]
+        fs.CopyFile fuenteST06 & "\" & archivo, destinoST08 & "\" & archivo [cite: 13]
+        archivo = Dir [cite: 13]
+    Loop
+    ' 2. Copiar MP4 (Añadido)
+    archivo = Dir(fuenteST06 & "\*.mp4")
+    Do While archivo <> ""
+        fs.CopyFile fuenteST06 & "\" & archivo, destinoST08 & "\" & archivo
+        archivo = Dir
+    Loop
+
+    ' Liberar el objeto FileSystem
+    Set fs = Nothing [cite: 14]
+
+End Sub
