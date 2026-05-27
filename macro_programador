@@ -1,0 +1,45 @@
+Sub AbrirVideo()
+    Dim estacion As String
+    Dim carpeta As String
+    Dim nombreArchivo As String
+    Dim rutaVideo As String
+    Dim rutaReproductor As String
+    Dim comillas As String
+    Dim comandoFinal As String
+    
+    ' =========================================================================
+    ' CONFIGURACIÓN: Cambia aquí la ST según la pantalla que quieras reproducir
+    ' Opciones disponibles: "ST06", "ST08", "ST14", "ST30", "ST35", "ST40", "ST60", "ST70", "ST72"
+    ' =========================================================================
+    estacion = "ST06"
+    
+    ' 1. Carpeta de red construida dinámicamente usando la variable de la ST
+    carpeta = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\" & estacion & "\"
+    
+    ' 2. Busca dinámicamente el archivo (Ej: si es ST06, buscará "Pantalla_ST06_*.mp4")
+    nombreArchivo = Dir(carpeta & "Pantalla_" & estacion & "_*.mp4")
+    
+    ' Control de seguridad por si la carpeta está vacía o no hay conexión a la red
+    If nombreArchivo = "" Then
+        MsgBox "No se encontró ningún video que empiece por Pantalla_" & estacion & "_ en la ruta de red especificada.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 3. Construimos la ruta final con el archivo encontrado en la red
+    rutaVideo = carpeta & nombreArchivo
+    rutaReproductor = "C:\Program Files\Windows Media Player\wmplayer.exe"
+    comillas = Chr(34)
+    comandoFinal = comillas & rutaReproductor & comillas & " /fullscreen " & comillas & rutaVideo & comillas
+    
+    ' 4. Ejecutamos el reproductor
+    Shell comandoFinal, vbNormalFocus
+    
+    ' --- Se cierra el vídeo ---
+    Application.OnTime TimeValue("10:54:00"), "CerrarVideo"
+End Sub
+
+' Se abre el vídeo nuevo
+Sub CerrarVideo()
+    Shell "taskkill /f /im wmplayer.exe", vbHide
+    Application.OnTime TimeValue("10:55:00"), "AbrirVideo"
+End Sub
