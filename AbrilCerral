@@ -1,0 +1,20 @@
+' --- CONFIGURACIÓN GENERAL ---
+Private Const RUTA_CARPETA As String = "\\Spi60001.eadscasa.casa.corp\a400m san pablo\Lean_Manufacturing\4.- Innovation\3. Projects info\13. Visual Plant\Pantallas N2\ST40\"
+Private Const PREFIJO_VIDEO As String = "Pantallas_ST40"
+
+' --- MACRO 1: SOLO ABRIR VÍDEO ---
+Public Sub AbrirVideoDinamico()
+    Dim nombreArchivo As String
+    Dim rutaCompleta As String
+    
+    nombreArchivo = Dir(RUTA_CARPETA & PREFIJO_VIDEO & "*.mp4")
+    If nombreArchivo <> "" Then
+        rutaCompleta = RUTA_CARPETA & nombreArchivo
+        CreateObject("WScript.Shell").Run "wmplayer.exe """ & rutaCompleta & """", 1, False
+    End If
+End Sub
+
+' --- MACRO 2: SOLO CERRAR VÍDEO ---
+Public Sub CerrarVideoDinamico()
+    CreateObject("WScript.Shell").Run "taskkill /f /im wmplayer.exe", 0, True
+End Sub
