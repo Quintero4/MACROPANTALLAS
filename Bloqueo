@@ -14,7 +14,7 @@ End Type
 #End If
 
 Sub BloquearPantallaDos()
-    Dim AreaPantalla Principal As RECT
+    Dim AreaPantallaPrincipal As RECT ' <-- Corregido: sin espacio en blanco
     
     ' CONFIGURACIÓN: Define los límites de tu Pantalla 1
     AreaPantallaPrincipal.Left = 0
