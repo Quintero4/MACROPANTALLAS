@@ -7,18 +7,19 @@ Public Type RECT
     Bottom As Long
 End Type
 
-' Declaraciones de la API de Windows
+' Declaraciones de la API de Windows (Añadimos GetAsyncKeyState para escuchar el teclado global)
 #If VBA7 Then
     Public Declare PtrSafe Function LockCursor Lib "user32" Alias "ClipCursor" (lpRect As RECT) As Long
     Public Declare PtrSafe Function FreeCursor Lib "user32" Alias "ClipCursor" (ByVal lpRect As LongPtr) As Long
     Public Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+    Public Declare PtrSafe Function GetAsyncKeyState Lib "user32" (ByVal vKey As Long) As Integer
 #Else
     Public Declare Function LockCursor Lib "user32" Alias "ClipCursor" (lpRect As RECT) As Long
     Public Declare Function FreeCursor Lib "user32" Alias "ClipCursor" (ByVal lpRect As Long) As Long
     Public Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+    Public Declare Function GetAsyncKeyState Lib "user32" (ByVal vKey As Long) As Integer
 #End If
 
-' Variable global para controlar si el bucle debe seguir activo
 Public IsLocked As Boolean
 
 Sub BloquearPantallaDos()
@@ -30,32 +31,32 @@ Sub BloquearPantallaDos()
     AreaPantallaPrincipal.Right = 1920   ' <-- Cambia si tu resolución es otra
     AreaPantallaPrincipal.Bottom = 1080  ' <-- Cambia si tu resolución es otra
     
-    ' Activamos el estado de bloqueo
     IsLocked = True
     
-    ' BUCLE PERSISTENTE: Aunque Windows intente quitar el bloqueo al minimizar, 
-    ' este bucle lo reactiva inmediatamente cada 30 milisegundos.
     Do While IsLocked = True
         LockCursor AreaPantallaPrincipal
         
-        ' CRUCIAL: DoEvents permite que Excel siga escuchando tus atajos de teclado (Ctrl+Shift+U)
-        DoEvents 
+        ' COMPROBACIÓN GLOBAL DEL TECLADO:
+        ' Detecta si se pulsan a la vez: CTRL (&H11), SHIFT (&H10) y la tecla U (&H55)
+        ' Funciona incluso con Excel minimizado.
+        If GetAsyncKeyState(&H11) < 0 And GetAsyncKeyState(&H10) < 0 And GetAsyncKeyState(&H55) < 0 Then
+            Call DesbloquearPantallaDos
+            Exit Do
+        End If
         
-        ' Pausa de 30 milisegundos para que el ordenador no se ralentice
+        DoEvents 
         Sleep 30
     Loop
 End Sub
 
 Sub DesbloquearPantallaDos()
-    ' Rompemos el bucle inmediatamente cambiándolo a False
     IsLocked = False
-    
-    ' Liberamos el ratón por completo
     #If VBA7 Then
         FreeCursor 0
     #Else
         FreeCursor 0&
     #End If
+    MsgBox "Pantalla desbloqueada correctamente.", vbInformation, "Éxito"
 End Sub
 
 
