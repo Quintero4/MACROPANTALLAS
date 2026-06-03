@@ -65,23 +65,16 @@ End Sub
 
 This work
 Private Sub Workbook_Open()
-    ' Asigna automáticamente el atajo Ctrl + Shift + U a la macro de desbloqueo
-    ' El símbolo ^ representa CTRL y el símbolo + representa SHIFT
-    Application.OnKey "^+u", "DesbloquearPantallaDos"
-    Application.OnKey "^+U", "DesbloquearPantallaDos"
+    ' NUEVO: Minimiza la ventana de Excel de forma inmediata nada más abrirse
+    Application.WindowState = xlMinimized
     
-    ' Opcional: Asigna Ctrl + Shift + B para volver a bloquear manualmente si lo necesitas
-    Application.OnKey "^+b", "BloquearPantallaDos"
-    Application.OnKey "^+B", "BloquearPantallaDos"
-    
-    ' Ejecuta el bloqueo de la pantalla de forma inmediata al abrir el Excel
+    ' Ejecuta el bloqueo persistente de la pantalla 2
     Call BloquearPantallaDos
 End Sub
 
 Private Sub Workbook_BeforeClose(Cancel As Boolean)
-    ' Por seguridad, si cierran el Excel, liberamos los atajos y el ratón
-    Application.OnKey "^+u"
-    Application.OnKey "^+b"
+    ' Por seguridad, si se cierra el archivo, liberamos el ratón
+    IsLocked = False
     #If VBA7 Then
         FreeCursor 0
     #Else
