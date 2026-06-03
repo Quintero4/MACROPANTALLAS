@@ -1,0 +1,38 @@
+This workbook
+#If VBA7 Then
+    ' API para obtener el ID único de este proceso de Excel
+    Private Declare PtrSafe Function GetCurrentProcessId Lib "kernel32" () As Long
+#Else
+    Private Declare Function GetCurrentProcessId Lib "kernel32" () As Long
+#End If
+
+Private Sub Workbook_Open()
+    Dim objWMIService As Object
+    Dim colProcessList As Object
+    Dim objProcess As Object
+    Dim miPID As Long
+    
+    ' Desactivamos alertas visibles de Excel por seguridad
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    ' 1. Conectamos con el núcleo de Windows de forma nativa (WMI)
+    Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+    Set colProcessList = objWMIService.ExecQuery("Select * from Win32_Process Where Name = 'excel.exe'")
+    
+    ' 2. Averiguamos el ID de este archivo ("Llave") para no suicidarse antes de tiempo
+    miPID = GetCurrentProcessId()
+    
+    ' 3. Recorremos todos los Excel que se estén ejecutando en la máquina
+    For Each objProcess In colProcessList
+        ' Si el proceso NO es este archivo Llave, lo fulminamos directamente
+        If objProcess.ProcessId <> miPID Then
+            objProcess.Terminate
+        End If
+    Next objProcess
+    
+    ' 4. Una vez destruido el proceso de "Candado" (lo que libera la pantalla al instante),
+    ' este archivo "Llave" se cierra a sí mismo de forma limpia.
+    ThisWorkbook.Saved = True
+    Application.Quit
+End Sub
