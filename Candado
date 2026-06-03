@@ -7,7 +7,6 @@ Public Type RECT
     Bottom As Long
 End Type
 
-' Declaraciones de la API de Windows (Añadimos GetAsyncKeyState para escuchar el teclado global)
 #If VBA7 Then
     Public Declare PtrSafe Function LockCursor Lib "user32" Alias "ClipCursor" (lpRect As RECT) As Long
     Public Declare PtrSafe Function FreeCursor Lib "user32" Alias "ClipCursor" (ByVal lpRect As LongPtr) As Long
@@ -25,6 +24,9 @@ Public IsLocked As Boolean
 Sub BloquearPantallaDos()
     Dim AreaPantallaPrincipal As RECT
     
+    ' NUEVO: Minimizamos AQUÍ, una vez que Excel ya se abrió del todo
+    Application.WindowState = xlMinimized
+    
     ' CONFIGURACIÓN: Límites de tu Pantalla 1
     AreaPantallaPrincipal.Left = 0
     AreaPantallaPrincipal.Top = 0
@@ -36,9 +38,7 @@ Sub BloquearPantallaDos()
     Do While IsLocked = True
         LockCursor AreaPantallaPrincipal
         
-        ' COMPROBACIÓN GLOBAL DEL TECLADO:
-        ' Detecta si se pulsan a la vez: CTRL (&H11), SHIFT (&H10) y la tecla U (&H55)
-        ' Funciona incluso con Excel minimizado.
+        ' Escucha global de CTRL + SHIFT + U (Se mantiene por si acaso)
         If GetAsyncKeyState(&H11) < 0 And GetAsyncKeyState(&H10) < 0 And GetAsyncKeyState(&H55) < 0 Then
             Call DesbloquearPantallaDos
             Exit Do
@@ -56,7 +56,7 @@ Sub DesbloquearPantallaDos()
     #Else
         FreeCursor 0&
     #End If
-    MsgBox "Pantalla desbloqueada correctamente.", vbInformation, "Éxito"
+    Application.WindowState = xlNormal
 End Sub
 
 
@@ -65,15 +65,13 @@ End Sub
 
 This work
 Private Sub Workbook_Open()
-    ' NUEVO: Minimiza la ventana de Excel de forma inmediata nada más abrirse
-    Application.WindowState = xlMinimized
-    
-    ' Ejecuta el bloqueo persistente de la pantalla 2
-    Call BloquearPantallaDos
+    ' Programamos el bloqueo para 1 segundo después de abrir.
+    ' Esto permite a Excel terminar de cargar, quitar el logo y estar listo.
+    Application.OnTime Now + TimeValue("00:00:01"), "BloquearPantallaDos"
 End Sub
 
 Private Sub Workbook_BeforeClose(Cancel As Boolean)
-    ' Por seguridad, si se cierra el archivo, liberamos el ratón
+    ' Por seguridad, si se cierra, liberamos el ratón
     IsLocked = False
     #If VBA7 Then
         FreeCursor 0
