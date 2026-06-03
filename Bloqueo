@@ -1,0 +1,48 @@
+Public Type RECT
+    Left As Long
+    Top As Long
+    Right As Long
+    Bottom As Long
+End Type
+
+#If VBA7 Then
+    Public Declare PtrSafe Function LockCursor Lib "user32" Alias "ClipCursor" (lpRect As RECT) As Long
+    Public Declare PtrSafe Function FreeCursor Lib "user32" Alias "ClipCursor" (ByVal lpRect As LongPtr) As Long
+#Else
+    Public Declare Function LockCursor Lib "user32" Alias "ClipCursor" (lpRect As RECT) As Long
+    Public Declare Function FreeCursor Lib "user32" Alias "ClipCursor" (ByVal lpRect As Long) As Long
+#End If
+
+Sub BloquearPantallaDos()
+    Dim AreaPantalla Principal As RECT
+    
+    ' CONFIGURACIÓN: Define los límites de tu Pantalla 1
+    AreaPantallaPrincipal.Left = 0
+    AreaPantallaPrincipal.Top = 0
+    AreaPantallaPrincipal.Right = 1920   ' <-- Cambia por el ANCHO de tu pantalla 1
+    AreaPantallaPrincipal.Bottom = 1080  ' <-- Cambia por el ALTO de tu pantalla 1
+    
+    ' Encierra el ratón en la pantalla principal
+    LockCursor AreaPantallaPrincipal
+End Sub
+
+Sub DesbloquearPantallaDos()
+    Dim Contrasena As String
+    
+    ' Pide la clave para desbloquear
+    Contrasena = InputBox("Introduce la contraseña para liberar la pantalla:", "Seguridad")
+    
+    ' Si la clave es correcta, libera el ratón
+    If Contrasena = "admin123" Then ' <-- Aquí cambias tu contraseña secreta
+        #If VBA7 Then
+            FreeCursor 0
+        #Else
+            FreeCursor 0&
+        #End If
+        MsgBox "Pantalla desbloqueada con éxito.", vbInformation, "Éxito"
+    Else
+        MsgBox "Contraseña incorrecta. La pantalla sigue bloqueada.", vbCritical, "Error"
+        ' Mantiene el bloqueo si fallan la clave
+        Call BloquearPantallaDos
+    End If
+End Sub
