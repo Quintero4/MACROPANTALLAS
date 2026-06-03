@@ -4,26 +4,39 @@
     Private Declare PtrSafe Function SetWindowPos Lib "user32" (ByVal hwnd As LongPtr, ByVal hWndInsertAfter As LongPtr, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
     Private Declare PtrSafe Function SetForegroundWindow Lib "user32" (ByVal hwnd As LongPtr) As Long
     Private Declare PtrSafe Function ShowWindow Lib "user32" (ByVal hwnd As LongPtr, ByVal nCmdShow As Long) As Long
+    Private Declare PtrSafe Function IsWindowVisible Lib "user32" (ByVal hwnd As LongPtr) As Long
+    Private Declare PtrSafe Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
 #Else
     Private Declare Function FindWindowEx Lib "user32" Alias "FindWindowExA" (ByVal hWndParent As Long, ByVal hWndChildAfter As Long, ByVal lpszClass As String, ByVal lpszWindow As String) As Long
     Private Declare Function GetWindowText Lib "user32" Alias "GetWindowTextA" (ByVal hwnd As Long, ByVal lpString As String, ByVal cch As Long) As Long
     Private Declare Function SetWindowPos Lib "user32" (ByVal hwnd As Long, ByVal hWndInsertAfter As Long, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
     Private Declare Function SetForegroundWindow Lib "user32" (ByVal hwnd As Long) As Long
     Private Declare Function ShowWindow Lib "user32" (ByVal hwnd As Long, ByVal nCmdShow As Long) As Long
+    Private Declare Function IsWindowVisible Lib "user32" (ByVal hwnd As Long) As Long
+    Private Declare Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
 #End If
 
-Const HWND_TOP = 0
 Const SWP_NOSIZE = &H1
+Const SWP_NOZORDER = &H4
 Const SWP_SHOWWINDOW = &H40
-Const SW_RESTORE = 9 ' Comando para des-maximizar temporalmente y permitir el movimiento
+Const SW_RESTORE = 9
+
+Const SM_CXSCREEN = 0
+Const SM_XVIRTUALSCREEN = 76
 
 Public ProximoChequeo As Double
 
+' =======================================================
+'  1. PRUEBA MANUAL (Dale a F5 aquí dentro con el video abierto)
+' =======================================================
 Sub ProbarAhoraMismo()
     Dim resultado As Boolean
     resultado = EjecutarAccionVideo(True)
 End Sub
 
+' =======================================================
+'  2. BUCLE AUTOMÁTICO
+' =======================================================
 Sub MonitorearVideoAutomatico()
     Dim encontrado As Boolean
     encontrado = EjecutarAccionVideo(False)
@@ -34,6 +47,9 @@ Sub MonitorearVideoAutomatico()
     End If
 End Sub
 
+' =======================================================
+'  3. FUNCIÓN PRINCIPAL DE CONTROL
+' =======================================================
 Function EjecutarAccionVideo(ModoPrueba As Boolean) As Boolean
     #If VBA7 Then
         Dim currHwnd As LongPtr
@@ -46,52 +62,61 @@ Function EjecutarAccionVideo(ModoPrueba As Boolean) As Boolean
     Dim title As String, windowTitle As String
     Dim textLen As Long, xPantalla2 As Long
     Dim esNuevoPlayer As Boolean
+    Dim xVirtual As Long, cxScreen As Long
     
-    ' ===================================================================
-    '  ¡AJUSTE DE PANTALLA AQUÍ!
-    ' ===================================================================
-    ' Si sigue apareciendo en la Pantalla 1, cambia este número:
-    ' - Prueba con -1920 si tu Pantalla 2 está a la IZQUIERDA de la de Excel.
-    ' - Prueba con 2560 o 3840 si tu pantalla de Excel es de mucha resolución.
-    xPantalla2 = 1920 
-    ' ===================================================================
+    ' --- DETECCIÓN AUTOMÁTICA E INTELIGENTE DE TU PANTALLA 2 ---
+    xVirtual = GetSystemMetrics(SM_XVIRTUALSCREEN)
+    cxScreen = GetSystemMetrics(SM_CXSCREEN)
+    
+    If xVirtual < 0 Then
+        ' Tu Pantalla 2 está situada a la IZQUIERDA de la principal
+        xPantalla2 = xVirtual + 100
+    Else
+        ' Tu Pantalla 2 está situada a la DERECHA de la principal
+        xPantalla2 = cxScreen + 100
+    End If
+    ' -----------------------------------------------------------
     
     targetHwnd = 0
     currHwnd = FindWindowEx(0, 0, vbNullString, vbNullString)
     
     Do While currHwnd <> 0
-        title = Space(255)
-        textLen = GetWindowText(currHwnd, title, 255)
-        
-        If textLen > 0 Then
-            windowTitle = Left(title, textLen)
+        ' FILTRO CRÍTICO: Comprobamos que la ventana sea VISIBLE en tu monitor
+        If IsWindowVisible(currHwnd) <> 0 Then
+            title = Space(255)
+            textLen = GetWindowText(currHwnd, title, 255)
             
-            ' CORRECCIÓN: Buscamos "Heredado" o "Media Player"
-            If InStr(1, windowTitle, "Heredado", vbTextCompare) > 0 Or _
-               InStr(1, windowTitle, "Media Player", vbTextCompare) > 0 Then
-                targetHwnd = currHwnd
-                esNuevoPlayer = False
-                Exit Do
-            ElseIf InStr(1, windowTitle, "Reproductor de multimedia", vbTextCompare) > 0 Or _
-                   InStr(1, windowTitle, "Películas", vbTextCompare) > 0 Then
-                targetHwnd = currHwnd
-                esNuevoPlayer = True
-                Exit Do
+            If textLen > 0 Then
+                windowTitle = Left(title, textLen)
+                
+                ' Búsqueda por el nombre que detectaste ("Heredado")
+                If InStr(1, windowTitle, "Heredado", vbTextCompare) > 0 Or _
+                   InStr(1, windowTitle, "Windows Media", vbTextCompare) > 0 Then
+                    targetHwnd = currHwnd
+                    esNuevoPlayer = False
+                    Exit Do
+                ElseIf InStr(1, windowTitle, "Reproductor de multimedia", vbTextCompare) > 0 Or _
+                       InStr(1, windowTitle, "Películas", vbTextCompare) > 0 Then
+                    targetHwnd = currHwnd
+                    esNuevoPlayer = True
+                    Exit Do
+                End If
             End If
         End If
         currHwnd = FindWindowEx(0, currHwnd, vbNullString, vbNullString)
     Loop
     
+    ' Si se localiza la ventana real del reproductor, se ejecutan las órdenes
     If targetHwnd <> 0 Then
-        ' 1. Forzar a que la ventana se "desbloquee" si estaba maximizada en la pantalla 1
+        ' Desmaximizamos temporalmente para obligar a Windows a permitir el arrastre entre pantallas
         ShowWindow targetHwnd, SW_RESTORE
         DoEvents
         
-        ' 2. Mover la ventana a la coordenada de la pantalla 2
-        SetWindowPos targetHwnd, HWND_TOP, xPantalla2, 0, 0, 0, SWP_NOSIZE Or SWP_SHOWWINDOW
+        ' Movemos la ventana a la coordenada calculada de la pantalla 2
+        SetWindowPos targetHwnd, 0, xPantalla2, 100, 0, 0, SWP_NOSIZE Or SWP_NOZORDER Or SWP_SHOWWINDOW
         Application.Wait (Now + TimeValue("00:00:01"))
         
-        ' 3. Traer al frente y expandir a pantalla completa
+        ' Traemos el reproductor al frente y lanzamos pantalla completa
         SetForegroundWindow targetHwnd
         DoEvents
         
@@ -101,10 +126,10 @@ Function EjecutarAccionVideo(ModoPrueba As Boolean) As Boolean
             SendKeys "%{ENTER}", True
         End If
         
-        If ModoPrueba Then MsgBox "¡Video detectado y enviado a la coordenada " & xPantalla2 & "!", vbInformation
+        If ModoPrueba Then MsgBox "¡Video detectado y enviado con éxito a la Pantalla 2! (Coordenada X calculada: " & xPantalla2 & ")", vbInformation
         EjecutarAccionVideo = True
     Else
-        If ModoPrueba Then MsgBox "No se detectó el reproductor. Asegúrate de tener el video reproduciéndose en pantalla.", vbExclamation
+        If ModoPrueba Then MsgBox "Excel no encontró ninguna ventana visible con el nombre de tu reproductor.", vbExclamation
         EjecutarAccionVideo = False
     End If
 End Function
@@ -113,7 +138,6 @@ Sub DetenerMonitoreo()
     On Error Resume Next
     Application.OnTime ProximoChequeo, "MonitorearVideoAutomatico", , False
 End Sub
-
 
 
 This WOrkbook
