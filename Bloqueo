@@ -7,13 +7,19 @@ Public Type RECT
     Bottom As Long
 End Type
 
+' Declaraciones de la API de Windows
 #If VBA7 Then
     Public Declare PtrSafe Function LockCursor Lib "user32" Alias "ClipCursor" (lpRect As RECT) As Long
     Public Declare PtrSafe Function FreeCursor Lib "user32" Alias "ClipCursor" (ByVal lpRect As LongPtr) As Long
+    Public Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
 #Else
     Public Declare Function LockCursor Lib "user32" Alias "ClipCursor" (lpRect As RECT) As Long
     Public Declare Function FreeCursor Lib "user32" Alias "ClipCursor" (ByVal lpRect As Long) As Long
+    Public Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
 #End If
+
+' Variable global para controlar si el bucle debe seguir activo
+Public IsLocked As Boolean
 
 Sub BloquearPantallaDos()
     Dim AreaPantallaPrincipal As RECT
@@ -21,15 +27,30 @@ Sub BloquearPantallaDos()
     ' CONFIGURACIÓN: Límites de tu Pantalla 1
     AreaPantallaPrincipal.Left = 0
     AreaPantallaPrincipal.Top = 0
-    AreaPantallaPrincipal.Right = 1920   ' <-- Cambia por el ANCHO de tu pantalla 1 si es distinto
-    AreaPantallaPrincipal.Bottom = 1080  ' <-- Cambia por el ALTO de tu pantalla 1 si es distinto
+    AreaPantallaPrincipal.Right = 1920   ' <-- Cambia si tu resolución es otra
+    AreaPantallaPrincipal.Bottom = 1080  ' <-- Cambia si tu resolución es otra
     
-    ' Encierra el ratón en la pantalla principal
-    LockCursor AreaPantallaPrincipal
+    ' Activamos el estado de bloqueo
+    IsLocked = True
+    
+    ' BUCLE PERSISTENTE: Aunque Windows intente quitar el bloqueo al minimizar, 
+    ' este bucle lo reactiva inmediatamente cada 30 milisegundos.
+    Do While IsLocked = True
+        LockCursor AreaPantallaPrincipal
+        
+        ' CRUCIAL: DoEvents permite que Excel siga escuchando tus atajos de teclado (Ctrl+Shift+U)
+        DoEvents 
+        
+        ' Pausa de 30 milisegundos para que el ordenador no se ralentice
+        Sleep 30
+    Loop
 End Sub
 
 Sub DesbloquearPantallaDos()
-    ' Libera el ratón inmediatamente
+    ' Rompemos el bucle inmediatamente cambiándolo a False
+    IsLocked = False
+    
+    ' Liberamos el ratón por completo
     #If VBA7 Then
         FreeCursor 0
     #Else
