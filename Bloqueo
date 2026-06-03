@@ -1,3 +1,5 @@
+Modulo
+
 Public Type RECT
     Left As Long
     Top As Long
@@ -16,7 +18,7 @@ End Type
 Sub BloquearPantallaDos()
     Dim AreaPantallaPrincipal As RECT
     
-    ' CONFIGURACIÓN: Define los límites de tu Pantalla 1
+    ' CONFIGURACIÓN: Límites de tu Pantalla 1
     AreaPantallaPrincipal.Left = 0
     AreaPantallaPrincipal.Top = 0
     AreaPantallaPrincipal.Right = 1920   ' <-- Cambia por el ANCHO de tu pantalla 1 si es distinto
@@ -27,7 +29,37 @@ Sub BloquearPantallaDos()
 End Sub
 
 Sub DesbloquearPantallaDos()
-    ' Libera el ratón inmediatamente sin pedir nada
+    ' Libera el ratón inmediatamente
+    #If VBA7 Then
+        FreeCursor 0
+    #Else
+        FreeCursor 0&
+    #End If
+End Sub
+
+
+
+
+
+This work
+Private Sub Workbook_Open()
+    ' Asigna automáticamente el atajo Ctrl + Shift + U a la macro de desbloqueo
+    ' El símbolo ^ representa CTRL y el símbolo + representa SHIFT
+    Application.OnKey "^+u", "DesbloquearPantallaDos"
+    Application.OnKey "^+U", "DesbloquearPantallaDos"
+    
+    ' Opcional: Asigna Ctrl + Shift + B para volver a bloquear manualmente si lo necesitas
+    Application.OnKey "^+b", "BloquearPantallaDos"
+    Application.OnKey "^+B", "BloquearPantallaDos"
+    
+    ' Ejecuta el bloqueo de la pantalla de forma inmediata al abrir el Excel
+    Call BloquearPantallaDos
+End Sub
+
+Private Sub Workbook_BeforeClose(Cancel As Boolean)
+    ' Por seguridad, si cierran el Excel, liberamos los atajos y el ratón
+    Application.OnKey "^+u"
+    Application.OnKey "^+b"
     #If VBA7 Then
         FreeCursor 0
     #Else
