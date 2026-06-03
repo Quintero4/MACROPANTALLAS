@@ -1,7 +1,7 @@
 #If VBA7 Then
     Private Declare PtrSafe Function FindWindowEx Lib "user32" Alias "FindWindowExA" (ByVal hWndParent As LongPtr, ByVal hWndChildAfter As LongPtr, ByVal lpszClass As String, ByVal lpszWindow As String) As LongPtr
     Private Declare PtrSafe Function GetWindowText Lib "user32" Alias "GetWindowTextA" (ByVal hwnd As LongPtr, ByVal lpString As String, ByVal cch As Long) As Long
-    Private Declare PtrSafe Function SetWindowPos Lib "user32" (ByVal hwnd As LongPtr, ByVal hWndInsertAfter LongPtr, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
+    Private Declare PtrSafe Function SetWindowPos Lib "user32" (ByVal hwnd As LongPtr, ByVal hWndInsertAfter As LongPtr, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
     Private Declare PtrSafe Function SetForegroundWindow Lib "user32" (ByVal hwnd As LongPtr) As Long
 #Else
     Private Declare Function FindWindowEx Lib "user32" Alias "FindWindowExA" (ByVal hWndParent As Long, ByVal hWndChildAfter As Long, ByVal lpszClass As String, ByVal lpszWindow As String) As Long
@@ -10,104 +10,9 @@
     Private Declare Function SetForegroundWindow Lib "user32" (ByVal hwnd As Long) As Long
 #End If
 
-Const HWND_TOP = 0
-Const SWP_NOSIZE = &H1
-Const SWP_SHOWWINDOW = &H40
 
-Public ProximoChequeo As Double
 
-' =======================================================
-'  1. MACRO DE PRUEBA (Dale a F5 aquí dentro para testear)
-' =======================================================
-Sub ProbarAhoraMismo()
-    Dim resultado As Boolean
-    resultado = EjecutarAccionVideo(True)
-End Sub
 
-' =======================================================
-'  2. BUCLE AUTOMÁTICO
-' =======================================================
-Sub MonitorearVideoAutomatico()
-    Dim encontrado As Boolean
-    encontrado = EjecutarAccionVideo(False)
-    
-    ' Si no lo encuentra, sigue buscando cada 2 segundos
-    If Not encontrado Then
-        ProximoChequeo = Now + TimeValue("00:00:02")
-        Application.OnTime ProximoChequeo, "MonitorearVideoAutomatico"
-    End If
-End Sub
-
-' =======================================================
-'  3. NÚCLEO DEL PROGRAMA (Busca y mueve el video)
-' =======================================================
-Function EjecutarAccionVideo(ModoModoPrueba As Boolean) As Boolean
-    #If VBA7 Then
-        Dim currHwnd As LongPtr
-        Dim targetHwnd As LongPtr
-    #Else
-        Dim currHwnd As Long
-        Dim targetHwnd As Long
-    #End If
-    
-    Dim title As String, windowTitle As String
-    Dim textLen As Long, xPantalla2 As Long
-    Dim esNuevoPlayer As Boolean
-    
-    xPantalla2 = 1920 ' Ajusta si tu pantalla 1 no es Full HD
-    targetHwnd = 0
-    currHwnd = FindWindowEx(0, 0, vbNullString, vbNullString)
-    
-    ' Escanear ventanas buscando el reproductor (añadido "Películas" por si acaso)
-    Do While currHwnd <> 0
-        title = Space(255)
-        textLen = GetWindowText(currHwnd, title, 255)
-        
-        If textLen > 0 Then
-            windowTitle = Left(title, textLen)
-            
-            If InStr(1, windowTitle, "Windows Media Player", vbTextCompare) > 0 Then
-                targetHwnd = currHwnd
-                esNuevoPlayer = False
-                Exit Do
-            ElseIf InStr(1, windowTitle, "Reproductor de multimedia", vbTextCompare) > 0 Then
-                targetHwnd = currHwnd
-                esNuevoPlayer = True
-                Exit Do
-            ElseIf InStr(1, windowTitle, "Películas y TV", vbTextCompare) > 0 Then
-                targetHwnd = currHwnd
-                esNuevoPlayer = True
-                Exit Do
-            End If
-        End If
-        currHwnd = FindWindowEx(0, currHwnd, vbNullString, vbNullString)
-    Loop
-    
-    ' Si lo encuentra, actúa
-    If targetHwnd <> 0 Then
-        SetWindowPos targetHwnd, HWND_TOP, xPantalla2, 0, 0, 0, SWP_NOSIZE Or SWP_SHOWWINDOW
-        Application.Wait (Now + TimeValue("00:00:01"))
-        SetForegroundWindow targetHwnd
-        DoEvents
-        
-        If esNuevoPlayer Then
-            SendKeys "{F11}", True
-        Else
-            SendKeys "%{ENTER}", True
-        End If
-        
-        If ModoModoPrueba Then MsgBox "¡Video detectado y movido!", vbInformation
-        EjecutarAccionVideo = True
-    Else
-        if ModoModoPrueba Then MsgBox "Excel está funcionando, pero NO encuentra ninguna ventana abierta que se llame 'Windows Media Player', 'Reproductor de multimedia' o 'Películas y TV'.", vbExclamation
-        EjecutarAccionVideo = False
-    End If
-End Function
-
-Sub DetenerMonitoreo()
-    On Error Resume Next
-    Application.OnTime ProximoChequeo, "MonitorearVideoAutomatico", , False
-End Sub
 
 This WOrkbook
 
