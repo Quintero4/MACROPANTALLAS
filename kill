@@ -1,0 +1,16 @@
+Private Sub Workbook_BeforeClose(Cancel As Boolean)
+    Dim intentoContrasenia As String
+    Dim contraseniaCorrecta As String
+    
+    ' Define aquí la contraseña que deseas utilizar
+    contraseniaCorrecta = "MiClaveSegura123"
+    
+    ' Solicita la contraseña al usuario
+    intentoContrasenia = InputBox("Introduce la contraseña para poder cerrar el archivo:", "Confirmación de Cierre")
+    
+    ' Verifica si la contraseña es correcta
+    If intentoContrasenia <> contraseniaCorrecta Then
+        MsgBox "Contraseña incorrecta. El archivo permanecerá abierto.", vbCritical, "Acceso Denegado"
+        Cancel = True ' Cancela el proceso de cierre de Excel
+    End If
+End Sub
