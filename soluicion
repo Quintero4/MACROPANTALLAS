@@ -37,10 +37,10 @@ Sub BloquearPantallaDos()
     IsLocked = True
     
     Do While IsLocked = True
-        ' Este bucle mantiene el cursor encerrado en la Pantalla 1 de forma constante
+        ' Mantiene el cursor estrictamente encerrado en la Pantalla 1
         LockCursor AreaPantallaPrincipal
         
-        ' Escucha global de CTRL + SHIFT + U (Por si quieres desbloquear con teclado)
+        ' Escucha global de CTRL + SHIFT + U
         If GetAsyncKeyState(&H11) < 0 And GetAsyncKeyState(&H10) < 0 And GetAsyncKeyState(&H55) < 0 Then
             Call DesbloquearPantallaDos
             Exit Do
@@ -78,9 +78,9 @@ Private Sub Workbook_BeforeClose(Cancel As Boolean)
     Dim ClaveIngresada As String
     
     ' CONFIGURACIÓN: Tu contraseña secreta
-    ClaveCorrecta = "TuContraseña123" 
+    ClaveCorrecta = "Kill" 
     
-    ' 1. Liberamos temporalmente el cursor para usar el InputBox sin problemas
+    ' 1. Liberamos temporalmente el cursor para interactuar con el InputBox
     #If VBA7 Then
         FreeCursor 0
     #Else
@@ -93,20 +93,21 @@ Private Sub Workbook_BeforeClose(Cancel As Boolean)
     
     ' 2. Evaluamos la contraseña
     If ClaveIngresada = ClaveCorrecta Then
-        ' Si es correcta, liberamos el ratón por completo y dejamos cerrar
+        ' Si es correcta, liberamos el ratón permanentemente y cerramos
         Call DesbloquearPantallaDos
     Else
-        ' Si es incorrecta o presionan Cancelar:
-        Cancel = True ' Abortamos el cierre del archivo
+        ' Si la contraseña es incorrecta, presionan Cancelar o cierran la ventana (X):
+        Cancel = True ' Abortamos el cierre del archivo de forma fulminante
         
-        MsgBox "Contraseña incorrecta. El bloqueo de pantalla permanecerá activo.", vbCritical, "Acceso Denegado"
+        MsgBox "Contraseña incorrecta o acción cancelada. El bloqueo de pantalla permanecerá activo.", vbCritical, "Acceso Denegado"
         
-        ' SOLUCIÓN: Volvemos a MINIMIZAR este Excel inmediatamente.
-        ' Esto limpia tu pantalla no bloqueada para que puedas seguir usándola al 100%.
-        Application.WindowState = xlMinimized
+        ' 3. Forzamos la detención del bucle antiguo para evitar hilos duplicados o corruptos en memoria
+        IsLocked = False
         DoEvents
         
-        ' Al salir de aquí, el bucle "BloquearPantallaDos" que sigue corriendo de fondo
-        ' reaplicará el candado de forma limpia en su siguiente ciclo, sin quedarse atrapado en la X.
+        ' 4. SOLUCIÓN CRÍTICA: Volvemos a lanzar la función principal con 1 segundo de retraso.
+        ' Esto le da tiempo a Excel para abortar el cierre y, justo después, vuelve a ejecutar
+        ' "BloquearPantallaDos" de forma nativa (minimizando el archivo y atrapando el ratón en la pantalla 1).
+        Application.OnTime Now + TimeValue("00:00:01"), "BloquearPantallaDos"
     End If
 End Sub
