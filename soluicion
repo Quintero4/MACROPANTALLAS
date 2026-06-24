@@ -28,19 +28,17 @@ Sub BloquearPantallaDos()
     Application.WindowState = xlMinimized
     DoEvents
     
-    ' CONFIGURACIÓN: Límites de tu Pantalla 1 (La pantalla que SÍ se puede usar)
+    ' CONFIGURACIÓN: Límites de tu Pantalla 1
     AreaPantallaPrincipal.Left = 0
     AreaPantallaPrincipal.Top = 0
-    AreaPantallaPrincipal.Right = 3840   ' <-- Ajusta a tu resolución si es necesario
-    AreaPantallaPrincipal.Bottom = 2160  ' <-- Ajusta a tu resolución si es necesario
+    AreaPantallaPrincipal.Right = 3840   
+    AreaPantallaPrincipal.Bottom = 2160  
     
     IsLocked = True
     
     Do While IsLocked = True
-        ' Mantiene el cursor estrictamente encerrado en la Pantalla 1
         LockCursor AreaPantallaPrincipal
         
-        ' Escucha global de CTRL + SHIFT + U
         If GetAsyncKeyState(&H11) < 0 And GetAsyncKeyState(&H10) < 0 And GetAsyncKeyState(&H55) < 0 Then
             Call DesbloquearPantallaDos
             Exit Do
@@ -70,17 +68,16 @@ Private Sub Workbook_Open()
     Application.WindowState = xlMaximized
     DoEvents
     
-    Application.OnTime Now + TimeValue("00:00:02"), "BloquearPantallaDos"
+    ' Corregido: Apuntamos directamente al módulo 'Candado'
+    Application.OnTime Now + TimeValue("00:00:02"), "Candado.BloquearPantallaDos"
 End Sub
 
 Private Sub Workbook_BeforeClose(Cancel As Boolean)
     Dim ClaveCorrecta As String
     Dim ClaveIngresada As String
     
-    ' CONFIGURACIÓN: Tu contraseña secreta
     ClaveCorrecta = "Kill" 
     
-    ' 1. Liberamos temporalmente el cursor para interactuar con el InputBox
     #If VBA7 Then
         FreeCursor 0
     #Else
@@ -91,23 +88,18 @@ Private Sub Workbook_BeforeClose(Cancel As Boolean)
     ClaveIngresada = InputBox("Introduce la contraseña para poder cerrar este archivo:", _
                               "Confirmación de Cierre")
     
-    ' 2. Evaluamos la contraseña
     If ClaveIngresada = ClaveCorrecta Then
-        ' Si es correcta, liberamos el ratón permanentemente y cerramos
         Call DesbloquearPantallaDos
     Else
-        ' Si la contraseña es incorrecta, presionan Cancelar o cierran la ventana (X):
-        Cancel = True ' Abortamos el cierre del archivo de forma fulminante
+        Cancel = True 
         
         MsgBox "Contraseña incorrecta o acción cancelada. El bloqueo de pantalla permanecerá activo.", vbCritical, "Acceso Denegado"
         
-        ' 3. Forzamos la detención del bucle antiguo para evitar hilos duplicados o corruptos en memoria
+        ' Frenamos el bucle viejo para limpiar memoria
         IsLocked = False
         DoEvents
         
-        ' 4. SOLUCIÓN CRÍTICA: Volvemos a lanzar la función principal con 1 segundo de retraso.
-        ' Esto le da tiempo a Excel para abortar el cierre y, justo después, vuelve a ejecutar
-        ' "BloquearPantallaDos" de forma nativa (minimizando el archivo y atrapando el ratón en la pantalla 1).
-        Application.OnTime Now + TimeValue("00:00:01"), "BloquearPantallaDos"
+        ' Corregido: Forzamos el relanzamiento explícito apuntando al módulo 'Candado'
+        Application.OnTime Now + TimeValue("00:00:01"), "Candado.BloquearPantallaDos"
     End If
 End Sub
