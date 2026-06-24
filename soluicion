@@ -19,7 +19,6 @@ End Type
 #End If
 
 Public IsLocked As Boolean
-' NUEVO: Esta variable ahora es Global para que BeforeClose pueda acceder a ella
 Public AreaPantallaPrincipal As RECT 
 
 Sub BloquearPantallaDos()
@@ -29,18 +28,19 @@ Sub BloquearPantallaDos()
     Application.WindowState = xlMinimized
     DoEvents
     
-    ' CONFIGURACIÓN: Límites de tu Pantalla 1
+    ' CONFIGURACIÓN: Límites de tu Pantalla 1 (La pantalla que SÍ se puede usar)
     AreaPantallaPrincipal.Left = 0
     AreaPantallaPrincipal.Top = 0
-    AreaPantallaPrincipal.Right = 3840   ' <-- Cambia si tu resolución es otra
-    AreaPantallaPrincipal.Bottom = 2160  ' <-- Cambia si tu resolución es otra
+    AreaPantallaPrincipal.Right = 3840   ' <-- Ajusta a tu resolución si es necesario
+    AreaPantallaPrincipal.Bottom = 2160  ' <-- Ajusta a tu resolución si es necesario
     
     IsLocked = True
     
     Do While IsLocked = True
+        ' Este bucle mantiene el cursor encerrado en la Pantalla 1 de forma constante
         LockCursor AreaPantallaPrincipal
         
-        ' Escucha global de CTRL + SHIFT + U
+        ' Escucha global de CTRL + SHIFT + U (Por si quieres desbloquear con teclado)
         If GetAsyncKeyState(&H11) < 0 And GetAsyncKeyState(&H10) < 0 And GetAsyncKeyState(&H55) < 0 Then
             Call DesbloquearPantallaDos
             Exit Do
@@ -80,7 +80,7 @@ Private Sub Workbook_BeforeClose(Cancel As Boolean)
     ' CONFIGURACIÓN: Tu contraseña secreta
     ClaveCorrecta = "TuContraseña123" 
     
-    ' 1. Liberamos temporalmente el cursor para que puedan escribir en el InputBox
+    ' 1. Liberamos temporalmente el cursor para usar el InputBox sin problemas
     #If VBA7 Then
         FreeCursor 0
     #Else
@@ -88,22 +88,25 @@ Private Sub Workbook_BeforeClose(Cancel As Boolean)
     #End If
     DoEvents
     
-    ClaveIngresada = InputBox("Introduce la contraseña para poder cerrar este archivo concretamente:", _
-                              "Confirmación de Cierre Requerida")
+    ClaveIngresada = InputBox("Introduce la contraseña para poder cerrar este archivo:", _
+                              "Confirmación de Cierre")
     
     ' 2. Evaluamos la contraseña
     If ClaveIngresada = ClaveCorrecta Then
-        ' Si es correcta, desbloqueamos todo permanentemente y dejamos cerrar
+        ' Si es correcta, liberamos el ratón por completo y dejamos cerrar
         Call DesbloquearPantallaDos
     Else
-        ' Si es incorrecta o cancela, impedimos que el archivo se cierre
-        Cancel = True
+        ' Si es incorrecta o presionan Cancelar:
+        Cancel = True ' Abortamos el cierre del archivo
         
-        ' Mostramos el mensaje de error (durante este aviso el mouse se moverá libremente por diseño de Windows)
         MsgBox "Contraseña incorrecta. El bloqueo de pantalla permanecerá activo.", vbCritical, "Acceso Denegado"
         
-        ' NUEVO Y CRÍTICO: En el milisegundo en que el usuario hace clic en "Aceptar" del MsgBox,
-        ' reactivamos el bloqueo usando la variable global antes de regresar al bucle principal.
-        LockCursor AreaPantallaPrincipal
+        ' SOLUCIÓN: Volvemos a MINIMIZAR este Excel inmediatamente.
+        ' Esto limpia tu pantalla no bloqueada para que puedas seguir usándola al 100%.
+        Application.WindowState = xlMinimized
+        DoEvents
+        
+        ' Al salir de aquí, el bucle "BloquearPantallaDos" que sigue corriendo de fondo
+        ' reaplicará el candado de forma limpia en su siguiente ciclo, sin quedarse atrapado en la X.
     End If
 End Sub
