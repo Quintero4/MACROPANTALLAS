@@ -1,0 +1,86 @@
+This workbook
+Private Sub Workbook_Open()
+    ' ProgramOnamos el bloqueo para 1 segundo después de abrir.
+    ' Esto permite a Excel terminar de cargar, quitar el logo y estar listo.
+    DoEvents
+    
+    Application.DisplayAlerts = True
+    Application.Visible = True
+    Application.WindowState = xlMaximized
+    
+    DoEvents
+
+    Application.OnTime Now + TimeValue("00:00:02"), "BloquearPantallaDos"
+    Call BloquearPantallaDos
+    
+End Sub
+
+
+
+Candado
+Public Type RECT
+    Left As Long
+    Top As Long
+    Right As Long
+    Bottom As Long
+End Type
+
+#If VBA7 Then
+    Public Declare PtrSafe Function LockCursor Lib "user32" Alias "ClipCursor" (lpRect As RECT) As Long
+    Public Declare PtrSafe Function FreeCursor Lib "user32" Alias "ClipCursor" (ByVal lpRect As LongPtr) As Long
+    Public Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+    Public Declare PtrSafe Function GetAsyncKeyState Lib "user32" (ByVal vKey As Long) As Integer
+#Else
+    Public Declare Function LockCursor Lib "user32" Alias "ClipCursor" (lpRect As RECT) As Long
+    Public Declare Function FreeCursor Lib "user32" Alias "ClipCursor" (ByVal lpRect As Long) As Long
+    Public Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+    Public Declare Function GetAsyncKeyState Lib "user32" (ByVal vKey As Long) As Integer
+#End If
+
+Public IsLocked As Boolean
+
+Sub BloquearPantallaDos()
+    Dim AreaPantallaPrincipal As RECT
+    
+    'Añadido para que la pantalla se abra 100%
+    Application.Visible = True
+    DoEvents
+    
+    ' Esto va hacer que el archivo esté abierto dos segundos.
+    Application.Wait (Now + TimeValue("00:00:02"))
+    
+    ' NUEVO: Minimizamos AQUÍ, una vez que Excel ya se abrió del todo
+    Application.WindowState = xlMinimized
+    
+    ' CONFIGURACIÓN: Límites de tu Pantalla 1
+    AreaPantallaPrincipal.Left = 0
+    AreaPantallaPrincipal.Top = 0
+    AreaPantallaPrincipal.Right = 3840   ' <-- Cambia si tu resolución es otra
+    AreaPantallaPrincipal.Bottom = 2160  ' <-- Cambia si tu resolución es otra
+    
+    IsLocked = True
+    
+    Do While IsLocked = True
+        LockCursor AreaPantallaPrincipal
+        
+        ' Escucha global de CTRL + SHIFT + U (Se mantiene por si acaso)
+        If GetAsyncKeyState(&H11) < 0 And GetAsyncKeyState(&H10) < 0 And GetAsyncKeyState(&H55) < 0 Then
+            Call DesbloquearPantallaDos
+            Exit Do
+        End If
+        
+                DoEvents
+        Sleep 30
+    Loop
+End Sub
+
+Sub DesbloquearPantallaDos()
+    IsLocked = False
+    #If VBA7 Then
+        FreeCursor 0
+    #Else
+        FreeCursor 0&
+    #End If
+    Application.WindowState = xlNormal
+End Sub
+
